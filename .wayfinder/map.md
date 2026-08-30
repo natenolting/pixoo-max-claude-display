@@ -39,6 +39,7 @@ Usage/cost screens are a later phase inside the same scope.
 - [Hardware smoke test](tickets/004-hardware-smoke-test.md) — **PASSED**: frame drawn via `/dev/cu.Pixoo-Max` + pyserial, 0.36 s/frame, brightness works; feasibility proven; driver seed code in `smoke_test/`.
 - [State screen prototype](tickets/006-state-screen-prototype.md) — **Variant A**: full-field state color + white icon + corner count digit, LED-validated. Also superseding transport find: keep device UNPAIRED, direct IOBluetooth RFCOMM ch.1 (async), not `/dev/cu`; needs BT TCC grant.
 - [Daemon architecture](tickets/005-daemon-architecture.md) — file-spool hook transport; Python; CLI-first; keep-open BT + backoff; 1 s redraw / 3 s sweep; five module seams. [ADR 0001](../../docs/adr/0001-unpaired-direct-rfcomm.md): never pair the device.
+- [Signal live experiment](tickets/007-signal-live-experiment.md) — registry `status` = idle/busy/waiting, <1 s latency, but null for Desktop/headless sessions (hybrid confirmed); PermissionRequest hook = instant NEEDS-PERMISSION signal; Stop fires on Esc; ccusage works.
 
 ## Not yet specified
 
