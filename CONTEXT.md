@@ -25,7 +25,13 @@ Glossary of the ubiquitous language. No implementation details here.
   Tracked Sessions currently share that state.
 - **Demotion** — WAITING becomes IDLE after 30 minutes without user
   response. NEEDS-PERMISSION never demotes.
-- **State Screen** — the display face showing Aggregate State + Count Badge
-  (phase 1).
-- **Usage Screen** — the display face showing usage/cost aggregates
-  (phase 2, not yet specified).
+- **State Screen** — the display face showing Aggregate State + Count Badge.
+- **Usage Screen** — the display face showing rate-limit utilization: the
+  Five-Hour Utilization as the headline, the Seven-Day Utilization as a
+  subordinate reading.
+- **Five-Hour Utilization** — the percentage of the rolling five-hour rate
+  limit consumed, with the instant it resets.
+- **Seven-Day Utilization** — the same for the rolling seven-day limit.
+- **Rotation** — which face the display shows. The State Screen holds the
+  display alone whenever the Aggregate State is NEEDS-PERMISSION or
+  WAITING; otherwise the two faces alternate.

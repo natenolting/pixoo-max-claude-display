@@ -63,6 +63,46 @@ def draw_pic_frame(img) -> bytes:
     return spp_frame(CMD_DRAW_PIC, [0x0, 0x0A, 0x0A, 0x04] + header + pal + pix)
 
 
+def _delegate_class():
+    """Build the RFCOMM delegate class once.
+
+    An Objective-C class name may only be registered with the runtime once
+    per process, so this must never run inside the connect path — a second
+    registration raises and every reconnect would fail.
+    """
+    import objc
+    from Foundation import NSObject
+
+    class _RFCOMMDelegate(NSObject):
+        def init(self):
+            self = objc.super(_RFCOMMDelegate, self).init()
+            self.open_status = None
+            self.owner = None
+            return self
+
+        def rfcommChannelOpenComplete_status_(self, channel, status):
+            self.open_status = status
+
+        def rfcommChannelClosed_(self, channel):
+            if self.owner is not None:
+                self.owner._channel = None
+
+        def rfcommChannelData_data_length_(self, channel, data, length):
+            pass  # device ACKs; nothing to do with them yet
+
+    return _RFCOMMDelegate
+
+
+_DELEGATE_CLASS = None
+
+
+def _get_delegate_class():
+    global _DELEGATE_CLASS
+    if _DELEGATE_CLASS is None:
+        _DELEGATE_CLASS = _delegate_class()
+    return _DELEGATE_CLASS
+
+
 class PixooTransport:
     def __init__(self, address: str):
         self.address = address
@@ -80,33 +120,15 @@ class PixooTransport:
         )
 
     def _connect(self) -> None:
-        import objc
         import IOBluetooth
-        from Foundation import NSObject
-
-        transport = self
-
-        class _Delegate(NSObject):
-            def init(self):
-                self = objc.super(_Delegate, self).init()
-                self.open_status = None
-                return self
-
-            def rfcommChannelOpenComplete_status_(self, channel, status):
-                self.open_status = status
-
-            def rfcommChannelClosed_(self, channel):
-                transport._channel = None
-
-            def rfcommChannelData_data_length_(self, channel, data, length):
-                pass  # device ACKs; nothing to do with them yet
 
         dev = IOBluetooth.IOBluetoothDevice.deviceWithAddressString_(self.address)
         if not dev.isConnected():
             err = dev.openConnection()
             if err != 0:
                 raise ConnectionError(f"baseband connect failed: {err}")
-        delegate = _Delegate.alloc().init()
+        delegate = _get_delegate_class().alloc().init()
+        delegate.owner = self
         result, channel = dev.openRFCOMMChannelAsync_withChannelID_delegate_(
             None, RFCOMM_CHANNEL, delegate
         )

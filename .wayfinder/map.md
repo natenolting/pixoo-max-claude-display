@@ -46,12 +46,10 @@ Phase-2 work lives in "Not yet specified" below.
 - [Signal live experiment](tickets/007-signal-live-experiment.md) — registry `status` = idle/busy/waiting, <1 s latency, but null for Desktop/headless sessions (hybrid confirmed); PermissionRequest hook = instant NEEDS-PERMISSION signal; Stop fires on Esc; ccusage works.
 - [Build the state-screen daemon](tickets/008-build-state-daemon.md) — **WORKING ON HARDWARE**: `claude_display/` package, hooks + registry sweep → Variant A frames over BT; phantom-session bug found & fixed (registry absence = death, 15 s grace; sync SessionEnd hook).
 - [Install as launchd agent](tickets/009-launchd-install.md) — LaunchAgent loaded, KeepAlive, own Bluetooth TCC grant (dialog allowed); logs at `~/Library/Logs/claude-display.log`.
+- [Usage screen semantics](tickets/010-usage-screen-semantics.md) — 5-hour rate-limit % is the headline (7-day secondary); cost/tokens dropped; State Screen wins whenever a session needs you, else 12 s/8 s alternation; source is `usage-cache.json` polled every 60 s, showing 0% past `resetsAt`.
 
 ## Not yet specified
 
-- Usage/cost screens (phase 2): which numbers, big-digit layout, data
-  pipeline — waits on state-screen build learnings.
-- Screen rotation/scheduling once more than one screen exists.
 - Staleness signaling: what the display shows when the daemon is dead and
   the last frame lingers.
 - Brightness / night behavior.
