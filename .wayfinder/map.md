@@ -47,6 +47,8 @@ Phase-2 work lives in "Not yet specified" below.
 - [Build the state-screen daemon](tickets/008-build-state-daemon.md) — **WORKING ON HARDWARE**: `claude_display/` package, hooks + registry sweep → Variant A frames over BT; phantom-session bug found & fixed (registry absence = death, 15 s grace; sync SessionEnd hook).
 - [Install as launchd agent](tickets/009-launchd-install.md) — LaunchAgent loaded, KeepAlive, own Bluetooth TCC grant (dialog allowed); logs at `~/Library/Logs/claude-display.log`.
 - [Usage screen semantics](tickets/010-usage-screen-semantics.md) — 5-hour rate-limit % is the headline (7-day secondary); cost/tokens dropped; State Screen wins whenever a session needs you, else 12 s/8 s alternation; source is `usage-cache.json` polled every 60 s, showing 0% past `resetsAt`.
+- [Usage screen prototype](tickets/011-usage-screen-prototype.md) — **Variant A**: big 7-segment 5-hour number + two bars, blue/amber/red severity ramp, LED-confirmed. Twin columns and perimeter ring rejected.
+- [Build the usage screen](tickets/012-build-usage-screen.md) — **RUNNING ON HARDWARE**: `usage.py` provider, `render_usage`, `choose_face` rotation; staleness rule caught a stale 44% on its first real read.
 
 ## Not yet specified
 
