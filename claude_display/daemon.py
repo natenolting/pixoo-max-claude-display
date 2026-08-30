@@ -13,7 +13,7 @@ import sys
 import functools
 import time
 
-from . import usage
+from . import brightness, usage
 from .renderer import render, render_blank, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
@@ -25,6 +25,7 @@ PIXOO_ADDR = "11-75-58-6e-bf-c1"
 DRY_RUN_FRAME = "/tmp/claude-display/frame.png"
 FORCED_REFRESH_S = 30
 USAGE_POLL_S = 60
+LOCK_POLL_S = 5
 STATE_FACE_S = 12
 USAGE_FACE_S = 8
 # states that hold the display alone — never hide "Claude needs you"
@@ -60,9 +61,11 @@ def main(argv=None) -> int:
     ap.add_argument("--dry-run", action="store_true",
                     help=f"render to {DRY_RUN_FRAME} instead of the device")
     ap.add_argument("--address", default=PIXOO_ADDR)
-    ap.add_argument("--brightness", type=int, default=80)
+    ap.add_argument("--brightness", type=int, default=brightness.DAY_BRIGHTNESS,
+                    help="daytime panel brightness (night dims automatically)")
     ap.add_argument("--spool", default=SPOOL_DIR)
     args = ap.parse_args(argv)
+    brightness.DAY_BRIGHTNESS = args.brightness
 
     spool = SpoolReader(args.spool)
     sweeper = RegistrySweeper()
@@ -83,10 +86,11 @@ def main(argv=None) -> int:
 
     last_shown = None
     last_push = 0.0
-    brightness_set = False
+    shown_brightness = None
     tick = 0
     util = usage.read()
-    last_usage_poll = time.monotonic()
+    away = brightness.is_away()
+    last_usage_poll = last_lock_poll = time.monotonic()
     rotation_start = time.monotonic()
     print(f"[daemon] up; spool={args.spool} "
           f"{'DRY RUN' if args.dry_run else 'device=' + args.address}")
@@ -102,12 +106,25 @@ def main(argv=None) -> int:
         if mono - last_usage_poll >= USAGE_POLL_S:
             util = usage.read()
             last_usage_poll = mono
+        if mono - last_lock_poll >= LOCK_POLL_S:
+            away = brightness.is_away()
+            last_lock_poll = mono
 
         state, count = store.aggregate()
         if state in DEMANDS_ATTENTION:
             rotation_start = mono
         blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
         face = choose_face(state, count, util, mono - rotation_start, blink)
+
+        want_brightness = brightness.target(
+            away, brightness.in_night_window(), state in DEMANDS_ATTENTION
+        )
+        if want_brightness != shown_brightness:
+            if args.dry_run or transport.set_brightness(want_brightness):
+                reason = "away" if away else (
+                    "night" if want_brightness == brightness.NIGHT_BRIGHTNESS else "day")
+                print(f"[daemon] brightness {want_brightness} ({reason})")
+                shown_brightness = want_brightness
 
         now = time.time()
         if face != last_shown or now - last_push > FORCED_REFRESH_S:
@@ -116,8 +133,6 @@ def main(argv=None) -> int:
                 img.save(DRY_RUN_FRAME)
                 pushed = True
             else:
-                if not brightness_set:
-                    brightness_set = transport.set_brightness(args.brightness)
                 pushed = transport.push(img)
             # the pulse flips every tick; log only real face changes
             changed = last_shown is None or face[:3] != last_shown[:3]

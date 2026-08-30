@@ -35,3 +35,11 @@ Glossary of the ubiquitous language. No implementation details here.
 - **Rotation** — which face the display shows. The State Screen holds the
   display alone whenever the Aggregate State is NEEDS-PERMISSION or
   WAITING; otherwise the two faces alternate.
+- **Pulse** — the slow dimming and restoring of the State Screen icon while
+  a session demands attention. It is both an attention signal and the only
+  available proof that the display is still live: a frame frozen by a lost
+  link can never be overwritten with a marker saying so.
+- **Away** — the user's screen is locked. Distinct from the Night Window:
+  either one dims the panel, but only Away suppresses the attention
+  override, because a bright panel wakes nobody in an empty room.
+- **Night Window** — the hours during which the panel dims by default.
