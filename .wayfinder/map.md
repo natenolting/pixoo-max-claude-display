@@ -18,6 +18,10 @@ USB if it turns out to do data), showing live Claude Code session state
 (working / idle / waiting-for-you), verified working on the real hardware.
 Usage/cost screens are a later phase inside the same scope.
 
+**STATUS: DESTINATION REACHED (2026-08-30).** All nine tickets closed; the
+daemon runs as a launchd agent and the display tracks live session state.
+Phase-2 work lives in "Not yet specified" below.
+
 ## Notes
 
 - Domain: macOS daemon + reverse-engineered Divoom BT protocol + Claude Code
@@ -41,6 +45,7 @@ Usage/cost screens are a later phase inside the same scope.
 - [Daemon architecture](tickets/005-daemon-architecture.md) — file-spool hook transport; Python; CLI-first; keep-open BT + backoff; 1 s redraw / 3 s sweep; five module seams. [ADR 0001](../../docs/adr/0001-unpaired-direct-rfcomm.md): never pair the device.
 - [Signal live experiment](tickets/007-signal-live-experiment.md) — registry `status` = idle/busy/waiting, <1 s latency, but null for Desktop/headless sessions (hybrid confirmed); PermissionRequest hook = instant NEEDS-PERMISSION signal; Stop fires on Esc; ccusage works.
 - [Build the state-screen daemon](tickets/008-build-state-daemon.md) — **WORKING ON HARDWARE**: `claude_display/` package, hooks + registry sweep → Variant A frames over BT; phantom-session bug found & fixed (registry absence = death, 15 s grace; sync SessionEnd hook).
+- [Install as launchd agent](tickets/009-launchd-install.md) — LaunchAgent loaded, KeepAlive, own Bluetooth TCC grant (dialog allowed); logs at `~/Library/Logs/claude-display.log`.
 
 ## Not yet specified
 
