@@ -20,7 +20,8 @@ Usage/cost screens are a later phase inside the same scope.
 
 **STATUS: DESTINATION REACHED (2026-08-30).** All nine tickets closed; the
 daemon runs as a launchd agent and the display tracks live session state.
-Phase-2 work lives in "Not yet specified" below.
+Phase 2 (Usage Screen), staleness signaling and night behavior have since
+been charted and shipped on the same map: 14 tickets, no fog remaining.
 
 ## Notes
 
@@ -54,7 +55,8 @@ Phase-2 work lives in "Not yet specified" below.
 
 ## Not yet specified
 
-- Brightness / night behavior.
+The fog is clear — every patch graduated into a ticket and closed. New
+work on this display starts a fresh map.
 
 ## Out of scope
 
