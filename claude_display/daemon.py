@@ -2,6 +2,9 @@
 
 Cadence per the daemon-architecture ticket: 1 s ticks (spool drain +
 render check), registry sweep every 3rd tick, forced refresh every 30 s.
+Rotation per the usage-screen semantics ticket: the State Screen holds the
+display alone whenever a session needs the user; otherwise the two faces
+alternate.
 """
 
 import argparse
@@ -10,7 +13,8 @@ import sys
 import functools
 import time
 
-from .renderer import render
+from . import usage
+from .renderer import render, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
 
@@ -20,6 +24,31 @@ print = functools.partial(print, flush=True)
 PIXOO_ADDR = "11-75-58-6e-bf-c1"
 DRY_RUN_FRAME = "/tmp/claude-display/frame.png"
 FORCED_REFRESH_S = 30
+USAGE_POLL_S = 60
+STATE_FACE_S = 12
+USAGE_FACE_S = 8
+# states that hold the display alone — never hide "Claude needs you"
+DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
+
+
+def choose_face(state, count, util, clock):
+    """Pick the face to show. Returns a tuple that doubles as a change key.
+
+    `clock` is seconds since rotation last became eligible; it resets while
+    a session demands attention so the State Screen always gets a full turn
+    first once things calm down.
+    """
+    if state in DEMANDS_ATTENTION:
+        return ("state", state, count)
+    if clock % (STATE_FACE_S + USAGE_FACE_S) < STATE_FACE_S:
+        return ("state", state, count)
+    return ("usage", util.five_hour, util.seven_day)
+
+
+def render_face(face):
+    if face[0] == "usage":
+        return render_usage(face[1], face[2])
+    return render(face[1], face[2])
 
 
 def main(argv=None) -> int:
@@ -52,6 +81,9 @@ def main(argv=None) -> int:
     last_push = 0.0
     brightness_set = False
     tick = 0
+    util = usage.read()
+    last_usage_poll = time.monotonic()
+    rotation_start = time.monotonic()
     print(f"[daemon] up; spool={args.spool} "
           f"{'DRY RUN' if args.dry_run else 'device=' + args.address}")
 
@@ -62,11 +94,19 @@ def main(argv=None) -> int:
             store.sweep(sweeper.sweep())
         tick += 1
 
-        current = store.aggregate()
+        mono = time.monotonic()
+        if mono - last_usage_poll >= USAGE_POLL_S:
+            util = usage.read()
+            last_usage_poll = mono
+
+        state, count = store.aggregate()
+        if state in DEMANDS_ATTENTION:
+            rotation_start = mono
+        face = choose_face(state, count, util, mono - rotation_start)
+
         now = time.time()
-        if current != last_shown or now - last_push > FORCED_REFRESH_S:
-            state, count = current
-            img = render(state, count)
+        if face != last_shown or now - last_push > FORCED_REFRESH_S:
+            img = render_face(face)
             if args.dry_run:
                 img.save(DRY_RUN_FRAME)
                 pushed = True
@@ -74,11 +114,13 @@ def main(argv=None) -> int:
                 if not brightness_set:
                     brightness_set = transport.set_brightness(args.brightness)
                 pushed = transport.push(img)
-            if current != last_shown:
-                print(f"[daemon] {state} x{count}"
+            if face != last_shown:
+                label = (f"{face[1]} x{face[2]}" if face[0] == "state"
+                         else f"usage 5h={face[1]}% 7d={face[2]}%")
+                print(f"[daemon] {label}"
                       f"{'' if pushed else ' (device unreachable, will retry)'}")
             if pushed:
-                last_shown = current
+                last_shown = face
                 last_push = now
         time.sleep(1)
 

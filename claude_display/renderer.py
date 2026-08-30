@@ -1,7 +1,9 @@
-"""Variant A state screen: full-field color, white icon, corner count digit.
+"""The two display faces, both Variant A designs.
 
-Design locked by the state-screen prototype ticket; see
-.wayfinder/tickets/006-state-screen-prototype.md.
+State Screen: full-field color, white icon, corner count digit
+(.wayfinder/tickets/006-state-screen-prototype.md).
+Usage Screen: big 7-segment five-hour percentage, five-hour bar, thin
+seven-day bar (.wayfinder/tickets/011-usage-screen-prototype.md).
 """
 
 from PIL import Image, ImageDraw
@@ -71,6 +73,73 @@ ICONS = {
     "WORKING": (_play, WHITE),
     "IDLE": (_zzz, IDLE_INK),
 }
+
+
+SEVERITY_CALM = (0, 130, 230)
+SEVERITY_WARN = (220, 140, 0)
+SEVERITY_ALARM = (230, 20, 20)
+BAR_TRACK = (40, 40, 60)
+BAR_TRACK_DIM = (20, 20, 30)
+
+# 7-segment strokes per digit: a top, b top-right, c bottom-right,
+# d bottom, e bottom-left, f top-left, g middle
+SEGMENTS = {
+    "0": "abcdef", "1": "bc", "2": "abdeg", "3": "abcdg", "4": "bcfg",
+    "5": "acdfg", "6": "acdefg", "7": "abc", "8": "abcdefg", "9": "abcdfg",
+}
+
+
+def _severity(pct: int):
+    if pct >= 90:
+        return SEVERITY_ALARM
+    if pct >= 70:
+        return SEVERITY_WARN
+    return SEVERITY_CALM
+
+
+def _seven_segment(d, ch, x, y, w, h, color, t=2):
+    segs = SEGMENTS[ch]
+    mid = y + h // 2
+    if "a" in segs:
+        d.rectangle([x + 1, y, x + w - 2, y + t - 1], fill=color)
+    if "g" in segs:
+        d.rectangle([x + 1, mid - t // 2, x + w - 2, mid - t // 2 + t - 1], fill=color)
+    if "d" in segs:
+        d.rectangle([x + 1, y + h - t, x + w - 2, y + h - 1], fill=color)
+    if "f" in segs:
+        d.rectangle([x, y + 1, x + t - 1, mid - 1], fill=color)
+    if "b" in segs:
+        d.rectangle([x + w - t, y + 1, x + w - 1, mid - 1], fill=color)
+    if "e" in segs:
+        d.rectangle([x, mid + 1, x + t - 1, y + h - 2], fill=color)
+    if "c" in segs:
+        d.rectangle([x + w - t, mid + 1, x + w - 1, y + h - 2], fill=color)
+
+
+def _big_number(d, text, cx, y, h, color):
+    # three digits (100%) only fit if each one narrows
+    w, gap = (11, 3) if len(text) <= 2 else (9, 1)
+    x = cx - (len(text) * w + (len(text) - 1) * gap) // 2
+    for ch in text:
+        _seven_segment(d, ch, x, y, w, h, color)
+        x += w + gap
+
+
+def render_usage(five_hour: int, seven_day: int) -> Image.Image:
+    """Usage Screen: five-hour percentage large, both windows as bars."""
+    img = Image.new("RGB", (32, 32), (0, 0, 0))
+    d = ImageDraw.Draw(img)
+    c5 = _severity(five_hour)
+    _big_number(d, str(min(five_hour, 100)), 16, 2, 19, c5)
+    d.rectangle([1, 24, 30, 27], outline=BAR_TRACK)
+    fill = int(round(28 * min(five_hour, 100) / 100))
+    if fill:
+        d.rectangle([2, 25, 1 + fill, 26], fill=c5)
+    d.rectangle([1, 29, 30, 30], fill=BAR_TRACK_DIM)
+    fill7 = int(round(30 * min(seven_day, 100) / 100))
+    if fill7:
+        d.rectangle([1, 29, fill7, 30], fill=_severity(seven_day))
+    return img
 
 
 def render(state: str, count: int) -> Image.Image:

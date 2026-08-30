@@ -2,7 +2,7 @@
 title: Build the usage screen
 labels: [wayfinder:task]
 status: open
-assignee:
+assignee: nate.nolting@paulbunyan.coop
 blocked-by: [010-usage-screen-semantics, 011-usage-screen-prototype]
 ---
 
