@@ -9,8 +9,11 @@ from dataclasses import dataclass, field
 
 PRECEDENCE = ["NEEDS_PERMISSION", "WAITING", "WORKING", "IDLE"]
 WAITING_DEMOTION_S = 30 * 60
-# a session with no registry entry and no signal for this long is dropped
-ORPHAN_TTL_S = 60 * 60
+# a clean exit DELETES the session's registry file (no dead-pid row ever
+# appears) and the async SessionEnd hook can lose the race against process
+# exit — so absence from the registry is itself the death signal, after a
+# short grace for hook-before-registry startup ordering
+NOT_IN_REGISTRY_GRACE_S = 15
 
 EVENT_STATE = {
     "PermissionRequest": "NEEDS_PERMISSION",
@@ -84,7 +87,7 @@ class SessionStore:
             else:
                 s.last_signal = now  # null status: liveness only (Desktop)
         for sid, s in list(self._sessions.items()):
-            if sid not in live and now - s.last_signal > ORPHAN_TTL_S:
+            if sid not in live and now - s.last_signal > NOT_IN_REGISTRY_GRACE_S:
                 del self._sessions[sid]
 
     def aggregate(self) -> tuple[str, int]:

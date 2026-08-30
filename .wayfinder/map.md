@@ -40,6 +40,7 @@ Usage/cost screens are a later phase inside the same scope.
 - [State screen prototype](tickets/006-state-screen-prototype.md) — **Variant A**: full-field state color + white icon + corner count digit, LED-validated. Also superseding transport find: keep device UNPAIRED, direct IOBluetooth RFCOMM ch.1 (async), not `/dev/cu`; needs BT TCC grant.
 - [Daemon architecture](tickets/005-daemon-architecture.md) — file-spool hook transport; Python; CLI-first; keep-open BT + backoff; 1 s redraw / 3 s sweep; five module seams. [ADR 0001](../../docs/adr/0001-unpaired-direct-rfcomm.md): never pair the device.
 - [Signal live experiment](tickets/007-signal-live-experiment.md) — registry `status` = idle/busy/waiting, <1 s latency, but null for Desktop/headless sessions (hybrid confirmed); PermissionRequest hook = instant NEEDS-PERMISSION signal; Stop fires on Esc; ccusage works.
+- [Build the state-screen daemon](tickets/008-build-state-daemon.md) — **WORKING ON HARDWARE**: `claude_display/` package, hooks + registry sweep → Variant A frames over BT; phantom-session bug found & fixed (registry absence = death, 15 s grace; sync SessionEnd hook).
 
 ## Not yet specified
 

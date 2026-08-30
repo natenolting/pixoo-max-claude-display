@@ -17,7 +17,7 @@
         {
           "type": "command",
           "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
-          "async": true
+          "timeout": 3
         }
       ]
     }
