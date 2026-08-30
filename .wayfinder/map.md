@@ -49,11 +49,10 @@ Phase-2 work lives in "Not yet specified" below.
 - [Usage screen semantics](tickets/010-usage-screen-semantics.md) — 5-hour rate-limit % is the headline (7-day secondary); cost/tokens dropped; State Screen wins whenever a session needs you, else 12 s/8 s alternation; source is `usage-cache.json` polled every 60 s, showing 0% past `resetsAt`.
 - [Usage screen prototype](tickets/011-usage-screen-prototype.md) — **Variant A**: big 7-segment 5-hour number + two bars, blue/amber/red severity ramp, LED-confirmed. Twin columns and perimeter ring rejected.
 - [Build the usage screen](tickets/012-build-usage-screen.md) — **RUNNING ON HARDWARE**: `usage.py` provider, `render_usage`, `choose_face` rotation; staleness rule caught a stale 44% on its first real read.
+- [Staleness signaling](tickets/013-staleness-signaling.md) — motion is the only possible liveness proof; attention states pulse the icon to 45% on a 2 s period, graceful exit blanks the panel. Rotation covers the calm states.
 
 ## Not yet specified
 
-- Staleness signaling: what the display shows when the daemon is dead and
-  the last frame lingers.
 - Brightness / night behavior.
 
 ## Out of scope

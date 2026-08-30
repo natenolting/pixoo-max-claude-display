@@ -14,7 +14,7 @@ import functools
 import time
 
 from . import usage
-from .renderer import render, render_usage
+from .renderer import render, render_blank, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
 
@@ -29,26 +29,30 @@ STATE_FACE_S = 12
 USAGE_FACE_S = 8
 # states that hold the display alone — never hide "Claude needs you"
 DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
+# half-period of the attention pulse; motion is the only proof of liveness,
+# since a frame frozen by a lost link can never be overwritten with a marker
+BLINK_HALF_PERIOD_S = 1.0
 
 
-def choose_face(state, count, util, clock):
+def choose_face(state, count, util, clock, blink=False):
     """Pick the face to show. Returns a tuple that doubles as a change key.
 
     `clock` is seconds since rotation last became eligible; it resets while
     a session demands attention so the State Screen always gets a full turn
-    first once things calm down.
+    first once things calm down. `blink` is the pulse phase, carried in the
+    key so the daemon redraws on every phase flip.
     """
     if state in DEMANDS_ATTENTION:
-        return ("state", state, count)
+        return ("state", state, count, blink)
     if clock % (STATE_FACE_S + USAGE_FACE_S) < STATE_FACE_S:
-        return ("state", state, count)
+        return ("state", state, count, False)
     return ("usage", util.five_hour, util.seven_day)
 
 
 def render_face(face):
     if face[0] == "usage":
         return render_usage(face[1], face[2])
-    return render(face[1], face[2])
+    return render(face[1], face[2], pulse=face[3])
 
 
 def main(argv=None) -> int:
@@ -102,7 +106,8 @@ def main(argv=None) -> int:
         state, count = store.aggregate()
         if state in DEMANDS_ATTENTION:
             rotation_start = mono
-        face = choose_face(state, count, util, mono - rotation_start)
+        blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
+        face = choose_face(state, count, util, mono - rotation_start, blink)
 
         now = time.time()
         if face != last_shown or now - last_push > FORCED_REFRESH_S:
@@ -114,7 +119,9 @@ def main(argv=None) -> int:
                 if not brightness_set:
                     brightness_set = transport.set_brightness(args.brightness)
                 pushed = transport.push(img)
-            if face != last_shown:
+            # the pulse flips every tick; log only real face changes
+            changed = last_shown is None or face[:3] != last_shown[:3]
+            if changed:
                 label = (f"{face[1]} x{face[2]}" if face[0] == "state"
                          else f"usage 5h={face[1]}% 7d={face[2]}%")
                 print(f"[daemon] {label}"
@@ -124,8 +131,13 @@ def main(argv=None) -> int:
                 last_push = now
         time.sleep(1)
 
+    # blank the panel on the way out: a dark display unambiguously means
+    # nothing is driving it, rather than a stale frame that looks healthy
     print("[daemon] shutting down")
-    if transport is not None:
+    if args.dry_run:
+        render_blank().save(DRY_RUN_FRAME)
+    elif transport is not None:
+        transport.push(render_blank())
         transport.close()
     return 0
 

@@ -142,14 +142,28 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     return img
 
 
-def render(state: str, count: int) -> Image.Image:
+PULSE_LEVEL = 0.45
+
+
+def _dim(color, factor=PULSE_LEVEL):
+    return tuple(int(round(c * factor)) for c in color)
+
+
+def render_blank() -> Image.Image:
+    """All black — shown on shutdown so a dark panel means nothing is driving it."""
+    return Image.new("RGB", (32, 32), (0, 0, 0))
+
+
+def render(state: str, count: int, pulse: bool = False) -> Image.Image:
+    """State Screen. `pulse` dims the icon for the liveness blink, which runs
+    only while a session demands attention (see the staleness ticket)."""
     img = Image.new("RGB", (32, 32), COLORS[state])
     d = ImageDraw.Draw(img)
     if state == "OFF":
         d.point([(31, 31)], fill=(30, 30, 30))
         return img
     icon, ink = ICONS[state]
-    icon(d, ink)
+    icon(d, _dim(ink) if pulse else ink)
     if count > 1:
         d.rectangle([26, 25, 31, 31], fill=(0, 0, 0))
         _digit(d, str(min(count, 9)), 28, 26, WHITE)
