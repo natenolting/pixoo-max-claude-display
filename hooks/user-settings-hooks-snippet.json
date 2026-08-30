@@ -1,0 +1,69 @@
+{
+  "//": "Merge these entries into the 'hooks' object of ~/.claude/settings.json (keep your existing PostToolUse entry). They feed the Pixoo display daemon from every Claude Code session.",
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PermissionRequest": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "/Users/natenolting/claude-display/hooks/claude-display-hook.sh",
+          "async": true
+        }
+      ]
+    }
+  ]
+}
