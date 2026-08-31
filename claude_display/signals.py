@@ -42,14 +42,18 @@ def _pid_alive(pid: int) -> bool:
 class RegistrySweeper:
     """Enumerates live sessions from ~/.claude/sessions/<pid>.json.
 
-    Excludes fleet-managed (cmux) sessions per the Tracked Session
-    definition in CONTEXT.md; ancestry lookups are cached per pid.
+    cmux-managed sessions can be excluded by process ancestry via
+    TRACK_CMUX_SESSIONS; lookups are cached per pid. They are tracked by
+    default — someone running Claude inside cmux would otherwise see an
+    empty display.
     """
 
     def __init__(self):
         self._ancestry_cache: dict[int, bool] = {}
 
     def _is_cmux(self, pid: int) -> bool:
+        if config.TRACK_CMUX_SESSIONS:
+            return False  # not excluding them, so do not pay for the ps walk
         cached = self._ancestry_cache.get(pid)
         if cached is not None:
             return cached

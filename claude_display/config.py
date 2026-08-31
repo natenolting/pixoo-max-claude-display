@@ -75,6 +75,13 @@ NIGHT_START_HOUR = get("NIGHT_START_HOUR", 22, int)
 NIGHT_END_HOUR = get("NIGHT_END_HOUR", 7, int)
 DIM_WHEN_LOCKED = get("DIM_WHEN_LOCKED", True, _as_bool)
 
+# --- sessions -------------------------------------------------------------
+# Sessions managed by cmux were excluded originally, on the theory that a
+# fleet of idle ones would drown the signal. Precedence already handles that
+# — one working session among eleven idle ones still reads WORKING — and for
+# anyone who runs Claude inside cmux, excluding them means tracking nothing.
+TRACK_CMUX_SESSIONS = get("TRACK_CMUX_SESSIONS", True, _as_bool)
+
 # --- behaviour ------------------------------------------------------------
 WAITING_DEMOTION_S = get("WAITING_DEMOTION_MIN", 30, int) * 60
 TOKEN_POLL_S = get("TOKEN_POLL_MIN", 5, int) * 60

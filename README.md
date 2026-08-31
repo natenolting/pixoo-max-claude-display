@@ -160,6 +160,7 @@ the file, and anything unset falls back to a default — so a missing or partial
 | `DIM_WHEN_LOCKED` | true | dim while the screen is locked |
 | `WAITING_DEMOTION_MIN` | 30 | how long an unanswered session holds the panel |
 | `TOKEN_POLL_MIN` | 5 | how often ccusage runs |
+| `TRACK_CMUX_SESSIONS` | true | track sessions running under cmux |
 | `SPOOL_DIR` | `/tmp/claude-display/spool` | where hooks drop events |
 
 Changes take effect on restart:

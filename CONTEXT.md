@@ -5,8 +5,10 @@ Glossary of the ubiquitous language. No implementation details here.
 ## Terms
 
 - **Tracked Session** — a Claude Code session the user drives directly in an
-  interactive terminal. Subagents and fleet-managed (cmux) sessions are not
-  Tracked Sessions.
+  interactive terminal. Subagents are never Tracked Sessions. cmux-managed
+  sessions are, by default: excluding them was an early guess that they were
+  background machinery, and it left the display blank for anyone who runs
+  Claude inside cmux. `TRACK_CMUX_SESSIONS` restores the old behaviour.
 - **Session State** — the state of one Tracked Session. Exactly one of:
   - **NEEDS-PERMISSION** — session is blocked on a permission prompt; work
     is stalled mid-turn until the user acts.

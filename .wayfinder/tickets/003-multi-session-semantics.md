@@ -29,3 +29,16 @@ Glossary captured in [CONTEXT.md](../../CONTEXT.md). Decisions:
 - **Tracked Session scope**: interactive sessions the user drives directly.
   Excluded: subagents, cmux-managed fleet sessions. Exact registry
   discriminator for cmux → [Signal live experiment](007-signal-live-experiment.md).
+
+
+## Amendment: cmux sessions are tracked by default
+
+Excluding cmux-managed sessions was decided before anyone had watched the
+display against real work. It rested on the idea that a fleet of idle cmux
+sessions would drown the signal — but Precedence already handles that (one
+working session among eleven idle ones still reads WORKING), and the user
+runs every real session inside cmux, so the display tracked exactly one
+session and never reacted to their actual work.
+
+They are now tracked by default, with `TRACK_CMUX_SESSIONS=false` restoring
+the exclusion for anyone whose cmux sessions genuinely are background.
