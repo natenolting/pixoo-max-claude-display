@@ -1,0 +1,4 @@
+# IOBluetooth drives the panel; Quartz reads screen-lock state for night dimming.
+pillow>=11
+pyobjc-framework-IOBluetooth>=11
+pyobjc-framework-Quartz>=11
