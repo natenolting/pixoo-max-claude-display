@@ -61,13 +61,16 @@ if [ -f "$LOG" ]; then
     # the log survives reboots, so only consider lines since the daemon's
     # most recent start — otherwise pre-reboot history reads as healthy
     recent=$(awk '/^\[daemon\] up;/{buf=""} {buf=buf $0 ORS} END{printf "%s", buf}' "$LOG")
-    if grep -q "device unreachable" <<<"$recent"; then
-        echo "FAIL  daemon cannot reach the panel (last 20 log lines)"
-        fail=1
-    elif grep -qE "^\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|usage)" <<<"$recent"; then
-        echo "OK    frames pushing — last: $(grep -E '^\[daemon\]' <<<"$recent" | tail -1)"
-    else
+    # judge by the LATEST frame line, not by whether an outage ever happened:
+    # a rocky start that has since recovered is a healthy display
+    latest=$(grep -E "^\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|OFF|usage)" <<<"$recent" | tail -1)
+    if [ -z "$latest" ]; then
         echo "WARN  agent started but has not pushed a frame yet"
+    elif [[ "$latest" == *"device unreachable"* ]]; then
+        echo "FAIL  daemon cannot reach the panel — last: $latest"
+        fail=1
+    else
+        echo "OK    frames pushing — last: $latest"
     fi
 else
     echo "FAIL  no log at $LOG"

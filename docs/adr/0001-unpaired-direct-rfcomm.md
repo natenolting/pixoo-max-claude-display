@@ -43,3 +43,17 @@ The daemon now undoes this itself. `_connect()` checks
 baseband link, using the Bluetooth grant the agent already holds. Pairing
 is therefore reverted on every connect and every backoff retry, so the
 display recovers without anyone noticing it was gone.
+
+## Addendum 2, 2026-08-30: verified self-healing across a second reboot
+
+The self-unpair was confirmed on a second cold boot. Sequence from the log:
+macOS had paired the device during startup, the daemon unpaired it, two
+RFCOMM opens then failed while the stack settled, and the third succeeded —
+brightness and frames from then on. Total time to a working panel was about
+fifteen seconds, with no human involvement.
+
+macOS re-pairs aggressively: twice within five minutes during one testing
+session, and again on every boot observed. Treat the pairing as something
+that continuously reasserts itself, not as a one-off to undo at install
+time. Undoing it on every connect attempt is the reason a rocky start
+recovers on its own.
