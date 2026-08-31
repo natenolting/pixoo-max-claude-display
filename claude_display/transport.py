@@ -111,6 +111,9 @@ class PixooTransport:
         self._delegate = None
         self._backoff = BACKOFF_MIN_S
         self._next_attempt = 0.0
+        # first attempt of a run clears any pairing macOS made while we were down
+        self._unpair_next = True
+        self._down_since: float | None = None
 
     def _pump(self, seconds: float) -> None:
         from Foundation import NSDate, NSRunLoop
@@ -125,17 +128,20 @@ class PixooTransport:
         dev = IOBluetooth.IOBluetoothDevice.deviceWithAddressString_(self.address)
         # macOS re-pairs the Pixoo on its own (notably across a reboot), and a
         # paired device is claimed as an audio peripheral and refuses RFCOMM
-        # — see ADR 0001. Undo it before every connect rather than leaving the
-        # user to notice a dark panel.
-        try:
-            if dev.isPaired():
-                err = dev.remove()
-                print(f"[transport] device was paired; unpaired (result {err})")
-                # unpairing drops whatever link macOS held; let the stack
-                # settle before opening our own, or it closes under us
-                self._pump(2.0)
-        except Exception as e:
-            print(f"[transport] could not check/undo pairing: {e}")
+        # (ADR 0001). Undo it only after an attempt has actually failed:
+        # remove() makes macOS forget the device entirely, and doing that on
+        # every retry churns the link harder than the problem warrants.
+        if self._unpair_next:
+            self._unpair_next = False
+            try:
+                if dev.isPaired():
+                    err = dev.remove()
+                    print(f"[transport] device was paired; unpaired (result {err})")
+                    # unpairing drops whatever link macOS held; let the stack
+                    # settle before opening ours, or it closes under us
+                    self._pump(2.0)
+            except Exception as e:
+                print(f"[transport] could not check/undo pairing: {e}")
         if not dev.isConnected():
             err = dev.openConnection()
             if err != 0:
@@ -167,13 +173,24 @@ class PixooTransport:
         try:
             self._connect()
             self._backoff = BACKOFF_MIN_S
+            self._down_since = None
             return True
         except Exception as e:
             print(f"[transport] connect failed: {e}; retry in {self._backoff}s")
             self._next_attempt = now + self._backoff
             self._backoff = min(self._backoff * 2, BACKOFF_MAX_S)
+            # a failed attempt is the signal that a pairing may be in the way
+            self._unpair_next = True
+            if self._down_since is None:
+                self._down_since = now
             self.close()
             return False
+
+    def down_for(self) -> float:
+        """Seconds since the link was last healthy, 0 when connected."""
+        if self._down_since is None:
+            return 0.0
+        return time.monotonic() - self._down_since
 
     def _write(self, data: bytes) -> None:
         if self._channel is None:
@@ -195,7 +212,10 @@ class PixooTransport:
         except Exception as e:
             print(f"[transport] write failed: {e}; will reconnect")
             self.close()
-            self._next_attempt = time.monotonic() + self._backoff
+            now = time.monotonic()
+            self._next_attempt = now + self._backoff
+            if self._down_since is None:
+                self._down_since = now
             return False
 
     def push(self, img) -> bool:
@@ -203,6 +223,22 @@ class PixooTransport:
 
     def set_brightness(self, value: int) -> bool:
         return self._send(spp_frame(CMD_SET_BRIGHTNESS, [max(0, min(100, value))]))
+
+    def blank_if_connected(self, img) -> bool:
+        """Push a final frame, but only over a channel that is already open.
+
+        Never reconnects. The shutdown path runs against a launchd deadline,
+        and a reconnect attempt there can burn ten seconds and get the process
+        SIGKILLed before it closes the channel — which is precisely what wedges
+        the device firmware (ADR 0001).
+        """
+        if self._channel is None:
+            return False
+        try:
+            self._write(draw_pic_frame(img))
+            return True
+        except Exception:
+            return False
 
     def close(self) -> None:
         # clean close matters: the device firmware wedges on dead sessions

@@ -34,6 +34,9 @@ DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
 # half-period of the attention pulse; motion is the only proof of liveness,
 # since a frame frozen by a lost link can never be overwritten with a marker
 BLINK_HALF_PERIOD_S = 1.0
+# how long the panel may stay dark before the log says so again; a single
+# "unreachable" line an hour ago is indistinguishable from a brief blip
+OUTAGE_REMINDER_S = 300
 
 
 def choose_face(state, count, util, token_count, clock, blink=False):
@@ -93,6 +96,7 @@ def main(argv=None) -> int:
     last_shown = None
     last_logged = None
     unreachable_logged = False
+    last_outage_notice = 0.0
     last_push = 0.0
     shown_brightness = None
     tick = 0
@@ -163,6 +167,13 @@ def main(argv=None) -> int:
                 # say it once per outage, not once per second
                 print(f"[daemon] {label} (device unreachable, will retry)")
                 unreachable_logged = True
+                last_outage_notice = mono
+            elif transport is not None and mono - last_outage_notice >= OUTAGE_REMINDER_S:
+                # ...but a dark panel must not stay silent for hours
+                mins = int(transport.down_for() // 60)
+                print(f"[daemon] still unreachable after {mins} min — "
+                      f"if this persists, power-cycle the Pixoo")
+                last_outage_notice = mono
         time.sleep(1)
 
     # blank the panel on the way out: a dark display unambiguously means
@@ -172,7 +183,9 @@ def main(argv=None) -> int:
     if args.dry_run:
         render_blank().save(DRY_RUN_FRAME)
     elif transport is not None:
-        transport.push(render_blank())
+        # never reconnect on the way out: launchd will SIGKILL a slow exit and
+        # an unclosed channel is what wedges the device (ADR 0001)
+        transport.blank_if_connected(render_blank())
         transport.close()
     return 0
 

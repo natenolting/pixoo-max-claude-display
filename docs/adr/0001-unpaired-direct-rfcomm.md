@@ -57,3 +57,29 @@ session, and again on every boot observed. Treat the pairing as something
 that continuously reasserts itself, not as a one-off to undo at install
 time. Undoing it on every connect attempt is the reason a rocky start
 recovers on its own.
+
+## Addendum 3, 2026-08-30: shutdown must not reconnect
+
+The device wedged once mid-session, needing a physical power cycle, and the
+shutdown path is the likeliest cause. It pushed a final blank frame through
+the normal `push()` call, which runs `_ensure_connected()` — so a shutdown
+with the link already down would attempt a *fresh* connection, burning up to
+ten seconds in the RFCOMM open pump before it ever reached `close()`. launchd
+SIGKILLs a slow exit, and a SIGKILL leaves the channel unclosed, which is what
+wedges the firmware.
+
+`blank_if_connected()` now writes the final frame only over a channel that is
+already open and never reconnects, and the plist sets an explicit
+`ExitTimeOut` of 10 s. Measured shutdown is 0.6 s when idle. It can still
+approach ten seconds if SIGTERM lands while a connect attempt is inside the
+runloop pump — Python cannot run the signal handler until the runloop yields —
+but no channel is open in that window, so nothing is left dangling.
+
+Unpairing was also made less aggressive. It had been running on every connect
+attempt, including every backoff retry; since `remove()` makes macOS forget the
+device entirely, that churned the link far harder than the problem required. It
+now runs on the first attempt of a daemon run and after any failed attempt,
+which still clears a pairing macOS introduced while we were down.
+
+This is a hypothesis supported by code reading and timing, not a reproduction.
+The wedge was seen once and has not recurred.

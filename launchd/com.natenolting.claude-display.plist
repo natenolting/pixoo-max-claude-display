@@ -18,6 +18,9 @@
     <true/>
     <key>ThrottleInterval</key>
     <integer>10</integer>
+    <!-- exit is now non-blocking; keep the SIGKILL deadline short and ours -->
+    <key>ExitTimeOut</key>
+    <integer>10</integer>
     <key>StandardOutPath</key>
     <string>/Users/natenolting/Library/Logs/claude-display.log</string>
     <key>StandardErrorPath</key>
