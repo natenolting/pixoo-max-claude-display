@@ -16,7 +16,9 @@ import subprocess
 import threading
 from datetime import date
 
-POLL_INTERVAL_S = 300
+from . import config
+
+POLL_INTERVAL_S = config.TOKEN_POLL_S
 CCUSAGE_TIMEOUT_S = 90
 
 # launchd hands agents a bare PATH (/usr/bin:/bin:/usr/sbin:/sbin), which does

@@ -5,7 +5,9 @@ import json
 import os
 import subprocess
 
-SPOOL_DIR = "/tmp/claude-display/spool"
+from . import config
+
+SPOOL_DIR = config.SPOOL_DIR
 REGISTRY_GLOB = os.path.expanduser("~/.claude/sessions/*.json")
 
 

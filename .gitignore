@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .wayfinder/.tmp/
 hooks/user-settings-hooks.generated.json
+.env

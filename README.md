@@ -40,18 +40,27 @@ cd ~/claude-display
 If that last line fails, the venv is on the wrong interpreter. Check with
 `.venv/bin/python -V`; anything below 3.10 will not work.
 
-**1. Do not pair the Pixoo.** This is the single most important rule — see
+**1. Configure it.** Copy `.env.example` to `.env` and set `PIXOO_ADDRESS` to
+your panel's Bluetooth address — from System Settings > Bluetooth, or
+`blueutil --inquiry 10`. Colons or dashes both work. Everything else in that
+file is optional; the defaults are what this was built with.
+
+```bash
+cp .env.example .env && $EDITOR .env
+```
+
+**2. Do not pair the Pixoo.** This is the single most important rule — see
 [ADR 0001](docs/adr/0001-unpaired-direct-rfcomm.md). A paired Pixoo is claimed
 by macOS as an audio device and refuses the serial channel we need. The daemon
 unpairs it automatically, but never pair it by hand.
 
-**2. Install the hooks.** Step 3 writes `hooks/user-settings-hooks.generated.json`
+**3. Install the hooks.** Step 3 writes `hooks/user-settings-hooks.generated.json`
 with real paths; merge its entries into the `hooks` object of
 `~/.claude/settings.json`, keeping any hooks already there. `SessionEnd` must stay synchronous (`"timeout": 3`, no `"async"`) — an
 async one loses the race against process exit and leaves a phantom session on
 the panel.
 
-**3. Install the launch agent.**
+**4. Install the launch agent.**
 
 ```bash
 ./scripts/install.sh
@@ -61,7 +70,7 @@ This fills the repo's real location into the launch agent and the hook config
 — launchd does not expand `~`, so both need absolute paths — then loads the
 agent. Use `--render` to see what it would write without installing anything.
 
-**4. Approve Bluetooth.** macOS prompts once, naming *Python*. Allow it. The
+**5. Approve Bluetooth.** macOS prompts once, naming *Python*. Allow it. The
 grant belongs to the venv's Python binary, which is the agent's own identity —
 so the daemon needs no terminal after this.
 
@@ -136,16 +145,25 @@ that the `SessionEnd` hook is synchronous.
 
 ## Configuration
 
-Constants, all in-code:
+All settings live in `.env` beside this README (gitignored; `.env.example`
+documents every key). A real environment variable of the same name overrides
+the file, and anything unset falls back to a default — so a missing or partial
+`.env` is fine, apart from `PIXOO_ADDRESS`.
 
-| Setting | Where | Default |
+| Key | Default | Meaning |
 |---|---|---|
-| Device address | `daemon.py` `PIXOO_ADDR` | `11-75-58-6e-bf-c1` |
-| Face durations | `daemon.py` `*_FACE_S` | 12 / 8 / 8 s |
-| Day / night brightness | `brightness.py` | 80 / 15 |
-| Night window | `brightness.py` | 22:00–07:00 |
-| Waiting → idle demotion | `state.py` | 30 min |
-| Token poll interval | `tokens.py` | 5 min |
+| `PIXOO_ADDRESS` | — | panel's Bluetooth address (**required**) |
+| `STATE_FACE_S` / `USAGE_FACE_S` / `TOKENS_FACE_S` | 12 / 8 / 8 | seconds each face holds the panel |
+| `SHOW_USAGE_FACE` / `SHOW_TOKENS_FACE` | true | set false to drop a face from the rotation |
+| `DAY_BRIGHTNESS` / `NIGHT_BRIGHTNESS` | 80 / 15 | panel brightness |
+| `NIGHT_START_HOUR` / `NIGHT_END_HOUR` | 22 / 7 | night window, may wrap midnight |
+| `DIM_WHEN_LOCKED` | true | dim while the screen is locked |
+| `WAITING_DEMOTION_MIN` | 30 | how long an unanswered session holds the panel |
+| `TOKEN_POLL_MIN` | 5 | how often ccusage runs |
+| `SPOOL_DIR` | `/tmp/claude-display/spool` | where hooks drop events |
+
+Changes take effect on restart:
+`launchctl kickstart -k gui/$UID/local.claude-display`.
 
 `--brightness N` overrides the daytime level; `--dry-run` renders to
 `/tmp/claude-display/frame.png` instead of the device, which needs no

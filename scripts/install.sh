@@ -21,6 +21,18 @@ render() {  # template -> stdout, with this machine's paths filled in
 
 echo "repo: $REPO"
 
+# --- per-machine settings --------------------------------------------------
+if [ ! -f "$REPO/.env" ]; then
+    cp "$REPO/.env.example" "$REPO/.env"
+    echo "created $REPO/.env from the example"
+fi
+if ! grep -qE '^PIXOO_ADDRESS=.+' "$REPO/.env"; then
+    echo "error: set PIXOO_ADDRESS in $REPO/.env before installing." >&2
+    echo "       Find the address in System Settings > Bluetooth, or with" >&2
+    echo "       blueutil --inquiry 10. Do not pair the device." >&2
+    exit 1
+fi
+
 # --- preflight: the venv must exist and carry the Bluetooth bindings --------
 if [ ! -x "$REPO/.venv/bin/python" ]; then
     echo "error: no venv at $REPO/.venv — see the Install section of README.md" >&2

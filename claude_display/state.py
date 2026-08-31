@@ -7,8 +7,10 @@ IDLE; WAITING demotes to IDLE after 30 min; NEEDS_PERMISSION never demotes.
 import time
 from dataclasses import dataclass, field
 
+from . import config
+
 PRECEDENCE = ["NEEDS_PERMISSION", "WAITING", "WORKING", "IDLE"]
-WAITING_DEMOTION_S = 30 * 60
+WAITING_DEMOTION_S = config.WAITING_DEMOTION_S
 # a clean exit DELETES the session's registry file (no dead-pid row ever
 # appears) and the async SessionEnd hook can lose the race against process
 # exit — so absence from the registry is itself the death signal, after a

@@ -13,7 +13,7 @@ import sys
 import functools
 import time
 
-from . import brightness, tokens as tokens_mod, usage
+from . import brightness, config, tokens as tokens_mod, usage
 from .renderer import render, render_blank, render_tokens, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
@@ -21,14 +21,14 @@ from .state import SessionStore
 # unbuffered logs: the daemon usually runs with stdout redirected
 print = functools.partial(print, flush=True)
 
-PIXOO_ADDR = "11-75-58-6e-bf-c1"
 DRY_RUN_FRAME = "/tmp/claude-display/frame.png"
 FORCED_REFRESH_S = 30
 USAGE_POLL_S = 60
 LOCK_POLL_S = 5
-STATE_FACE_S = 12
-USAGE_FACE_S = 8
-TOKENS_FACE_S = 8
+STATE_FACE_S = config.STATE_FACE_S
+# a face turned off in config gets no time in the rotation
+USAGE_FACE_S = config.USAGE_FACE_S if config.SHOW_USAGE_FACE else 0
+TOKENS_FACE_S = config.TOKENS_FACE_S if config.SHOW_TOKENS_FACE else 0
 # states that hold the display alone — never hide "Claude needs you"
 DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
 # half-period of the attention pulse; motion is the only proof of liveness,
@@ -87,12 +87,16 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="claude_display")
     ap.add_argument("--dry-run", action="store_true",
                     help=f"render to {DRY_RUN_FRAME} instead of the device")
-    ap.add_argument("--address", default=PIXOO_ADDR)
+    ap.add_argument("--address", default=config.PIXOO_ADDRESS,
+                    help="Pixoo Bluetooth address (default: PIXOO_ADDRESS in .env)")
     ap.add_argument("--brightness", type=int, default=brightness.DAY_BRIGHTNESS,
                     help="daytime panel brightness (night dims automatically)")
     ap.add_argument("--spool", default=SPOOL_DIR)
     args = ap.parse_args(argv)
     brightness.DAY_BRIGHTNESS = args.brightness
+    if not args.dry_run and not args.address:
+        ap.error("no Pixoo address configured — set PIXOO_ADDRESS in "
+                 f"{config.ENV_PATH} (see .env.example), or pass --address")
 
     spool = SpoolReader(args.spool)
     sweeper = RegistrySweeper()

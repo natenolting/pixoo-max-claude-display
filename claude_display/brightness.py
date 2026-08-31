@@ -8,10 +8,12 @@ panel wakes nobody in an empty room.
 
 from datetime import datetime
 
-DAY_BRIGHTNESS = 80
-NIGHT_BRIGHTNESS = 15
-NIGHT_START_HOUR = 22
-NIGHT_END_HOUR = 7
+from . import config
+
+DAY_BRIGHTNESS = config.DAY_BRIGHTNESS
+NIGHT_BRIGHTNESS = config.NIGHT_BRIGHTNESS
+NIGHT_START_HOUR = config.NIGHT_START_HOUR
+NIGHT_END_HOUR = config.NIGHT_END_HOUR
 
 
 def in_night_window(now: datetime | None = None) -> bool:
@@ -22,6 +24,8 @@ def in_night_window(now: datetime | None = None) -> bool:
 def is_away() -> bool:
     """True when the screen is locked. Unreadable session state reads as
     present, so a failure here leaves the panel usable rather than dark."""
+    if not config.DIM_WHEN_LOCKED:
+        return False
     try:
         from Quartz import CGSessionCopyCurrentDictionary
 
