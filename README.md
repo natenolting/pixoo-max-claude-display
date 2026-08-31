@@ -88,6 +88,12 @@ launchctl bootout gui/$UID/com.natenolting.claude-display       # stop
 A **dark panel means nothing is driving it** — the daemon blanks the display
 on a clean exit, so darkness is honest rather than a stale frame.
 
+The check may report `NOTE  Pixoo is paired again`. That is not a fault while
+frames are flowing: macOS re-pairs the device constantly, and a pairing only
+blocks the *next* connection, never a channel that is already open. The daemon
+clears it the next time it reconnects. Do **not** unpair a display that is
+working — it forces a needless reconnect.
+
 ## When something is wrong
 
 **Panel dark, log says `device unreachable`.** The daemon retries with backoff

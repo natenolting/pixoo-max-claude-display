@@ -33,6 +33,7 @@ else
 fi
 
 # 2. did macOS re-pair the device? (the failure that has bitten us repeatedly)
+paired=unknown
 if command -v blueutil >/dev/null 2>&1; then
     paired_out=$(blueutil --paired 2>&1)
     if [ $? -ne 0 ]; then
@@ -41,15 +42,9 @@ if command -v blueutil >/dev/null 2>&1; then
         echo "SKIP  blueutil could not read Bluetooth (run this from Terminal,"
         echo "      which holds the Bluetooth permission): ${paired_out%%$'\n'*}"
     elif grep -qi "$ADDR_DASH" <<<"$paired_out"; then
-        echo "FAIL  Pixoo is PAIRED — macOS grabs it as an audio device and RFCOMM is refused"
-        fail=1
-        if $FIX; then
-            echo "      unpairing..."
-            blueutil --unpair "$ADDR_DASH" && echo "      unpaired"
-        else
-            echo "      fix: blueutil --unpair $ADDR_DASH"
-        fi
+        paired=yes
     else
+        paired=no
         echo "OK    Pixoo unpaired (as ADR 0001 requires)"
     fi
 else
@@ -64,6 +59,7 @@ if [ -f "$LOG" ]; then
     # judge by the LATEST frame line, not by whether an outage ever happened:
     # a rocky start that has since recovered is a healthy display
     latest=$(grep -E "^\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|OFF|usage)" <<<"$recent" | tail -1)
+    driving=no
     if [ -z "$latest" ]; then
         echo "WARN  agent started but has not pushed a frame yet"
     elif [[ "$latest" == *"device unreachable"* ]]; then
@@ -71,6 +67,25 @@ if [ -f "$LOG" ]; then
         fail=1
     else
         echo "OK    frames pushing — last: $latest"
+        driving=yes
+    fi
+
+    # A pairing only blocks the NEXT connect; it cannot disturb a channel that
+    # is already open. Calling it a failure while frames are flowing told the
+    # user to unpair and restart a working display — advice that would break it.
+    if [ "$paired" = yes ] && [ "$driving" = yes ]; then
+        echo "NOTE  Pixoo is paired again (macOS does this); harmless while"
+        echo "      frames are flowing — the daemon clears it at the next connect"
+    elif [ "$paired" = yes ]; then
+        echo "FAIL  Pixoo is PAIRED and the panel is not being driven —"
+        echo "      macOS claims it as an audio device and RFCOMM is refused"
+        fail=1
+        if $FIX; then
+            echo "      unpairing..."
+            blueutil --unpair "$ADDR_DASH" && echo "      unpaired"
+        else
+            echo "      fix: blueutil --unpair $ADDR_DASH"
+        fi
     fi
 else
     echo "FAIL  no log at $LOG"
