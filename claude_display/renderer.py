@@ -89,6 +89,25 @@ SEGMENTS = {
 }
 
 
+# 5x5 glyphs for the unit suffix and the TOK label
+LETTERS = {
+    "%": ["11001", "11010", "00100", "01011", "10011"],
+    "K": ["101", "110", "100", "110", "101"],
+    "M": ["10001", "11011", "10101", "10001", "10001"],
+    "T": ["111", "010", "010", "010", "010"],
+    "O": ["111", "101", "101", "101", "111"],
+}
+
+
+def _letter(d, ch, x, y, color):
+    rows = LETTERS[ch]
+    for row, bits in enumerate(rows):
+        for col, bit in enumerate(bits):
+            if bit == "1":
+                d.point([(x + col, y + row)], fill=color)
+    return len(rows[0])
+
+
 def _severity(pct: int):
     if pct >= 90:
         return SEVERITY_ALARM
@@ -116,9 +135,10 @@ def _seven_segment(d, ch, x, y, w, h, color, t=2):
         d.rectangle([x + w - t, mid + 1, x + w - 1, y + h - 2], fill=color)
 
 
-def _big_number(d, text, cx, y, h, color):
+def _big_number(d, text, cx, y, h, color, w=None, gap=None):
     # three digits (100%) only fit if each one narrows
-    w, gap = (11, 3) if len(text) <= 2 else (9, 1)
+    if w is None:
+        w, gap = (11, 3) if len(text) <= 2 else (9, 1)
     x = cx - (len(text) * w + (len(text) - 1) * gap) // 2
     for ch in text:
         _seven_segment(d, ch, x, y, w, h, color)
@@ -130,7 +150,12 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     img = Image.new("RGB", (32, 32), (0, 0, 0))
     d = ImageDraw.Draw(img)
     c5 = _severity(five_hour)
-    _big_number(d, str(min(five_hour, 100)), 16, 2, 19, c5)
+    # the bare number read as an unlabelled quantity; the % names the unit,
+    # and the digits narrow to make room for it (as the token face does)
+    text = str(min(five_hour, 100))
+    w, gap = (11, 3) if len(text) <= 2 else (8, 1)
+    _big_number(d, text, 13, 2, 19, c5, w, gap)
+    _letter(d, "%", 26, 14, c5)
     d.rectangle([1, 24, 30, 27], outline=BAR_TRACK)
     fill = int(round(28 * min(five_hour, 100) / 100))
     if fill:
@@ -172,24 +197,6 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
 
 TOKEN_INK = (150, 90, 220)
 LABEL_INK = (90, 60, 130)
-
-# 5x5 glyphs for the unit suffix and the TOK label
-LETTERS = {
-    "K": ["101", "110", "100", "110", "101"],
-    "M": ["10001", "11011", "10101", "10001", "10001"],
-    "T": ["111", "010", "010", "010", "010"],
-    "O": ["111", "101", "101", "101", "111"],
-}
-
-
-def _letter(d, ch, x, y, color):
-    rows = LETTERS[ch]
-    for row, bits in enumerate(rows):
-        for col, bit in enumerate(bits):
-            if bit == "1":
-                d.point([(x + col, y + row)], fill=color)
-    return len(rows[0])
-
 
 def _number_with_dot(d, text, cx, y, h, color, w, gap):
     """Digits with an optional decimal point, centred on cx."""
