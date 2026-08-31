@@ -16,7 +16,12 @@ from Foundation import NSObject, NSRunLoop, NSDate
 sys.path.insert(0, "prototypes/state_screen")
 from proto import VARIANTS, STATES, DEMO_COUNT, encode_image_32, spp_frame
 
-PIXOO_ADDR = "11-75-58-6e-bf-c1"
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+from claude_display.config import PIXOO_ADDRESS as _ADDR
+if not _ADDR:
+    _sys.exit("set PIXOO_ADDRESS in .env first")
+PIXOO_ADDR = _ADDR
 RFCOMM_CHANNEL = 1
 
 

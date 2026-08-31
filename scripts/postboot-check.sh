@@ -10,7 +10,10 @@
 #   ./scripts/postboot-check.sh --fix    also unpair and restart if needed
 
 set -uo pipefail
-ADDR_DASH="11-75-58-6e-bf-c1"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# the address lives in .env like every other setting
+ADDR_DASH=$(grep -E '^PIXOO_ADDRESS=' "$REPO/.env" 2>/dev/null \
+    | head -1 | cut -d= -f2- | tr -d '"'"'"' ' | tr ':' '-' | tr 'A-Z' 'a-z')
 LABEL="local.claude-display"
 LOG="$HOME/Library/Logs/claude-display.log"
 FIX=false

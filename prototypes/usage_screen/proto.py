@@ -226,7 +226,12 @@ def push_to_device(which):
     def pump(s):
         NSRunLoop.currentRunLoop().runUntilDate_(NSDate.dateWithTimeIntervalSinceNow_(s))
 
-    dev = IOBluetooth.IOBluetoothDevice.deviceWithAddressString_("11-75-58-6e-bf-c1")
+    import os as _os, sys as _sys
+    _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+    from claude_display.config import PIXOO_ADDRESS as _ADDR
+    if not _ADDR:
+        _sys.exit("set PIXOO_ADDRESS in .env first")
+    dev = IOBluetooth.IOBluetoothDevice.deviceWithAddressString_(_ADDR)
     if not dev.isConnected():
         err = dev.openConnection()
         if err != 0:
