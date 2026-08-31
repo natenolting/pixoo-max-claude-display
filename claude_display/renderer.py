@@ -168,3 +168,73 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
         d.rectangle([26, 25, 31, 31], fill=(0, 0, 0))
         _digit(d, str(min(count, 9)), 28, 26, WHITE)
     return img
+
+
+TOKEN_INK = (150, 90, 220)
+LABEL_INK = (90, 60, 130)
+
+# 5x5 glyphs for the unit suffix and the TOK label
+LETTERS = {
+    "K": ["101", "110", "100", "110", "101"],
+    "M": ["10001", "11011", "10101", "10001", "10001"],
+    "T": ["111", "010", "010", "010", "010"],
+    "O": ["111", "101", "101", "101", "111"],
+}
+
+
+def _letter(d, ch, x, y, color):
+    rows = LETTERS[ch]
+    for row, bits in enumerate(rows):
+        for col, bit in enumerate(bits):
+            if bit == "1":
+                d.point([(x + col, y + row)], fill=color)
+    return len(rows[0])
+
+
+def _number_with_dot(d, text, cx, y, h, color, w, gap):
+    """Digits with an optional decimal point, centred on cx."""
+    digits = [c for c in text if c != "."]
+    dot_w = 3 if "." in text else 0
+    total = len(digits) * w + (len(digits) - 1) * gap + dot_w
+    x = cx - total // 2
+    for ch in text:
+        if ch == ".":
+            d.rectangle([x, y + h - 2, x + 1, y + h - 1], fill=color)
+            x += dot_w
+            continue
+        _seven_segment(d, ch, x, y, w, h, color)
+        x += w + gap
+
+
+def render_tokens(count: int | None) -> Image.Image:
+    """Token Screen: today's input + output count, compacted (293K, 1.2M).
+
+    The unit sits inline with the number — a separate unit letter beside the
+    "TOK" label read as one nonsense word ("KTOK").
+    """
+    from .tokens import compact
+
+    img = Image.new("RGB", (32, 32), (0, 0, 0))
+    d = ImageDraw.Draw(img)
+    if count is None:
+        # no reading yet — the label alone, never a false zero
+        x = 8
+        for ch in "TOK":
+            x += _letter(d, ch, x, 13, LABEL_INK) + 2
+        return img
+
+    text, unit = compact(count)
+    digits = [c for c in text if c != "."]
+    # narrow the digits when a unit letter has to share the row
+    if unit:
+        w, gap = (11, 3) if len(digits) <= 2 else (8, 1)
+        _number_with_dot(d, text, 13, 3, 17, TOKEN_INK, w, gap)
+        _letter(d, unit, 26, 14, TOKEN_INK)
+    else:
+        w, gap = (11, 3) if len(digits) <= 2 else (9, 1)
+        _number_with_dot(d, text, 16, 3, 17, TOKEN_INK, w, gap)
+
+    x = 10  # "TOK" centred in the bottom strip
+    for ch in "TOK":
+        x += _letter(d, ch, x, 25, LABEL_INK) + 2
+    return img

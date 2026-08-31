@@ -13,8 +13,8 @@ import sys
 import functools
 import time
 
-from . import brightness, usage
-from .renderer import render, render_blank, render_usage
+from . import brightness, tokens as tokens_mod, usage
+from .renderer import render, render_blank, render_tokens, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
 
@@ -28,6 +28,7 @@ USAGE_POLL_S = 60
 LOCK_POLL_S = 5
 STATE_FACE_S = 12
 USAGE_FACE_S = 8
+TOKENS_FACE_S = 8
 # states that hold the display alone — never hide "Claude needs you"
 DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
 # half-period of the attention pulse; motion is the only proof of liveness,
@@ -35,7 +36,7 @@ DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
 BLINK_HALF_PERIOD_S = 1.0
 
 
-def choose_face(state, count, util, clock, blink=False):
+def choose_face(state, count, util, token_count, clock, blink=False):
     """Pick the face to show. Returns a tuple that doubles as a change key.
 
     `clock` is seconds since rotation last became eligible; it resets while
@@ -45,14 +46,19 @@ def choose_face(state, count, util, clock, blink=False):
     """
     if state in DEMANDS_ATTENTION:
         return ("state", state, count, blink)
-    if clock % (STATE_FACE_S + USAGE_FACE_S) < STATE_FACE_S:
+    pos = clock % (STATE_FACE_S + USAGE_FACE_S + TOKENS_FACE_S)
+    if pos < STATE_FACE_S:
         return ("state", state, count, False)
-    return ("usage", util.five_hour, util.seven_day)
+    if pos < STATE_FACE_S + USAGE_FACE_S:
+        return ("usage", util.five_hour, util.seven_day)
+    return ("tokens", token_count)
 
 
 def render_face(face):
     if face[0] == "usage":
         return render_usage(face[1], face[2])
+    if face[0] == "tokens":
+        return render_tokens(face[1])
     return render(face[1], face[2], pulse=face[3])
 
 
@@ -92,6 +98,8 @@ def main(argv=None) -> int:
     tick = 0
     util = usage.read()
     away = brightness.is_away()
+    token_poller = tokens_mod.TokenPoller()
+    token_poller.start()  # ccusage is far too slow for the 1 s tick
     last_usage_poll = last_lock_poll = time.monotonic()
     rotation_start = time.monotonic()
     print(f"[daemon] up; spool={args.spool} "
@@ -116,7 +124,8 @@ def main(argv=None) -> int:
         if state in DEMANDS_ATTENTION:
             rotation_start = mono
         blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
-        face = choose_face(state, count, util, mono - rotation_start, blink)
+        face = choose_face(state, count, util, token_poller.value(),
+                           mono - rotation_start, blink)
 
         want_brightness = brightness.target(
             away, brightness.in_night_window(), state in DEMANDS_ATTENTION
@@ -136,8 +145,12 @@ def main(argv=None) -> int:
                 pushed = True
             else:
                 pushed = transport.push(img)
-            label = (f"{face[1]} x{face[2]}" if face[0] == "state"
-                     else f"usage 5h={face[1]}% 7d={face[2]}%")
+            if face[0] == "state":
+                label = f"{face[1]} x{face[2]}"
+            elif face[0] == "usage":
+                label = f"usage 5h={face[1]}% 7d={face[2]}%"
+            else:
+                label = f"tokens {face[1] if face[1] is not None else 'pending'}"
             if pushed:
                 # the pulse flips every tick; log only real face changes
                 if face[:3] != last_logged:
@@ -155,6 +168,7 @@ def main(argv=None) -> int:
     # blank the panel on the way out: a dark display unambiguously means
     # nothing is driving it, rather than a stale frame that looks healthy
     print("[daemon] shutting down")
+    token_poller.stop()
     if args.dry_run:
         render_blank().save(DRY_RUN_FRAME)
     elif transport is not None:

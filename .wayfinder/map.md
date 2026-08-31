@@ -52,6 +52,14 @@ been charted and shipped on the same map: 14 tickets, no fog remaining.
 - [Build the usage screen](tickets/012-build-usage-screen.md) — **RUNNING ON HARDWARE**: `usage.py` provider, `render_usage`, `choose_face` rotation; staleness rule caught a stale 44% on its first real read.
 - [Staleness signaling](tickets/013-staleness-signaling.md) — motion is the only possible liveness proof; attention states pulse the icon to 45% on a 2 s period, graceful exit blanks the panel. Rotation covers the calm states.
 - [Brightness and night behavior](tickets/014-night-behavior.md) — dims to 15 when Away (screen locked, via Quartz) or inside the 22:00–07:00 Night Window; attention returns full brightness only while present.
+- Token Screen (2026-08-30, no ticket — small enough not to warrant a map):
+  a third face showing today's input + output tokens, polled from
+  `npx ccusage daily --json` on a background thread every 5 min. Rotation is
+  now State 12 s / rate limits 8 s / tokens 8 s. This **reverses** the
+  [Usage screen semantics](tickets/010-usage-screen-semantics.md) decision
+  to drop token totals; the user asked for the number knowing it is not
+  actionable. Shows input+output rather than ccusage's `totalTokens`, which
+  is ~96% cache reads and therefore enormous every day.
 
 ## Not yet specified
 
