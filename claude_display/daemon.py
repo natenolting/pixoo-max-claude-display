@@ -39,6 +39,24 @@ BLINK_HALF_PERIOD_S = 1.0
 OUTAGE_REMINDER_S = 300
 
 
+def outage_announcement(down_for, already_logged, since_last_notice):
+    """What, if anything, to say about an unreachable device.
+
+    Returns "first", "reminder", or None. Extracted from the loop because
+    inline it grew three interacting conditions and produced two wrong
+    answers in a row: reporting a failure during the startup settle window
+    when nothing had been tried yet, and firing the five-minute reminder
+    immediately because its timestamp started at zero.
+    """
+    if down_for <= 0:
+        return None  # nothing has failed — e.g. still inside the settle window
+    if not already_logged:
+        return "first"
+    if since_last_notice >= OUTAGE_REMINDER_S:
+        return "reminder"
+    return None
+
+
 def choose_face(state, count, util, token_count, clock, blink=False):
     """Pick the face to show. Returns a tuple that doubles as a change key.
 
@@ -96,7 +114,7 @@ def main(argv=None) -> int:
     last_shown = None
     last_logged = None
     unreachable_logged = False
-    last_outage_notice = 0.0
+    last_outage_notice = time.monotonic()
     last_push = 0.0
     shown_brightness = None
     tick = 0
@@ -163,19 +181,19 @@ def main(argv=None) -> int:
                 unreachable_logged = False
                 last_shown = face
                 last_push = now
-            elif not unreachable_logged and transport is not None \
-                    and transport.down_for() > 0:
-                # say it once per outage, not once per second — and not at all
-                # while the startup settle window is simply waiting to try
-                print(f"[daemon] {label} (device unreachable, will retry)")
-                unreachable_logged = True
-                last_outage_notice = mono
-            elif transport is not None and mono - last_outage_notice >= OUTAGE_REMINDER_S:
-                # ...but a dark panel must not stay silent for hours
-                mins = int(transport.down_for() // 60)
-                print(f"[daemon] still unreachable after {mins} min — "
-                      f"if this persists, power-cycle the Pixoo")
-                last_outage_notice = mono
+            elif transport is not None:
+                down = transport.down_for()
+                say = outage_announcement(down, unreachable_logged,
+                                          mono - last_outage_notice)
+                if say == "first":
+                    print(f"[daemon] {label} (device unreachable, will retry)")
+                elif say == "reminder":
+                    # a dark panel must not stay silent for hours
+                    print(f"[daemon] still unreachable after {int(down // 60)} min"
+                          f" — if this persists, power-cycle the Pixoo")
+                if say:
+                    unreachable_logged = True
+                    last_outage_notice = mono
         time.sleep(1)
 
     # blank the panel on the way out: a dark display unambiguously means

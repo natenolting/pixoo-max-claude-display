@@ -172,7 +172,7 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     _letter(d, "%", 26, 14, c5)
     # the mascot takes the bottom-left corner and both bars start after it;
     # a shorter bar costs less legibility than a smaller numeral would
-    _mascot(d, 1, 24, scale=1, level=0.8)
+    _mascot(d, *MASCOT_CORNER, scale=1, level=0.8)
     d.rectangle([10, 24, 30, 27], outline=BAR_TRACK)
     fill = int(round(19 * min(five_hour, 100) / 100))
     if fill:
@@ -188,6 +188,9 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
 # literal: the daemon must never fail to draw a face because a file moved.
 # Near-identical source shades are collapsed to two, since the wire format is
 # palette-indexed and every extra colour costs frame bytes.
+# one corner position shared by every face — the faces swap in place, so a
+# pixel of drift between them reads as the mascot jumping
+MASCOT_CORNER = (1, 25)
 MASCOT_BODY = (218, 119, 87)
 MASCOT_EYE = (248, 248, 248)
 MASCOT = [
@@ -284,7 +287,7 @@ def render_tokens(count: int | None) -> Image.Image:
         _number_with_dot(d, text, 16, 3, 17, TOKEN_INK, w, gap)
 
     # mascot in the corner, then "TOK" in the strip beside it
-    _mascot(d, 1, 25, scale=1, level=0.8)
+    _mascot(d, *MASCOT_CORNER, scale=1, level=0.8)
     x = 12
     for ch in "TOK":
         x += _letter(d, ch, x, 25, LABEL_INK) + 2
