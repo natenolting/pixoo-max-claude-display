@@ -61,3 +61,14 @@ cursor (too visually light at this size) and an arrow pointing at the viewer
 
 Icon functions now take the pulse phase and decide what it means for them,
 so NEEDS-PERMISSION keeps dimming its mark while WAITING blinks its cursor.
+
+
+## Amendment: IDLE became a scene
+
+The idle face was a dim `z z z` glyph on near-black — the least considered
+of the five, and the one shown most of the time. It is now a full 32x32
+sleeping-Claude illustration supplied by the user
+(`assets/claude-guy-sleeping.png`), baked in as a literal like the mascot.
+Three colours, so the palette-indexed frame stays cheap. The count badge
+still draws over it, and the field-plus-icon path now covers only the three
+states that still work that way.

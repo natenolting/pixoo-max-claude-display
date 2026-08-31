@@ -1,9 +1,11 @@
-"""The two display faces, both Variant A designs.
+"""The display faces.
 
-State Screen: full-field color, white icon, corner count digit
-(.wayfinder/tickets/006-state-screen-prototype.md).
-Usage Screen: big 7-segment five-hour percentage, five-hour bar, thin
-seven-day bar (.wayfinder/tickets/011-usage-screen-prototype.md).
+State Screen: a coloured field with a white icon and a corner count badge
+(.wayfinder/tickets/006-state-screen-prototype.md) — except IDLE, which is
+a whole sleeping-Claude scene, and OFF, which rests the mascot on black.
+Usage Screen: big 7-segment five-hour percentage with two bars
+(.wayfinder/tickets/011-usage-screen-prototype.md).
+Token Screen: today's input + output count, compacted.
 """
 
 from PIL import Image, ImageDraw
@@ -12,12 +14,10 @@ COLORS = {
     "NEEDS_PERMISSION": (200, 0, 0),
     "WAITING": (210, 130, 0),
     "WORKING": (0, 70, 200),
-    "IDLE": (12, 12, 24),
     "OFF": (0, 0, 0),
 }
 
 WHITE = (255, 255, 255)
-IDLE_INK = (90, 90, 140)
 
 DIGITS_3X5 = {
     "0": ["111", "101", "101", "101", "111"],
@@ -73,19 +73,11 @@ def _play(d, color, pulse=False):
     d.polygon([(11, 8), (11, 24), (23, 16)], fill=color)
 
 
-def _zzz(d, color, pulse=False):
-    for ox, oy, s in [(8, 8, 2), (16, 14, 2), (12, 21, 1)]:
-        w = 3 * s
-        d.line([ox, oy, ox + w, oy], fill=color)
-        d.line([ox + w, oy, ox, oy + w], fill=color)
-        d.line([ox, oy + w, ox + w, oy + w], fill=color)
-
-
+# IDLE has no icon entry: it renders a whole scene, not a glyph on a field
 ICONS = {
     "NEEDS_PERMISSION": (_bang, WHITE),
     "WAITING": (_caret, WHITE),
     "WORKING": (_play, WHITE),
-    "IDLE": (_zzz, IDLE_INK),
 }
 
 
@@ -216,14 +208,78 @@ def _mascot(d, x, y, scale=1, level=1.0):
                         fill=body if ch == "B" else eye)
 
 
+# The sleeping-Claude idle scene, traced from assets/claude-guy-sleeping.png.
+# Three colours: '.' backdrop, '#' the sleeping figure, 'o' the drifting Zs.
+SLEEP_BACK = (91, 96, 155)
+SLEEP_FIGURE = (51, 54, 87)
+SLEEP_ZS = (153, 153, 204)
+SLEEP_COLOURS = {".": SLEEP_BACK, "#": SLEEP_FIGURE, "o": SLEEP_ZS}
+SLEEPING = [
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+    "............ooo..ooo............",
+    "..............o....o............",
+    ".......ooo...o....o...ooo.......",
+    ".........o..o....o......o.......",
+    "........o...ooo..ooo...o........",
+    "..ooo..o..............o....ooo..",
+    "....o..ooo............ooo....o..",
+    "...o........................o...",
+    "..o........................o....",
+    "..ooo......................ooo..",
+    "........################........",
+    "........################........",
+    "........##.##.####.##.##........",
+    "........##.##.####.##.##........",
+    "........##.##.####.##.##........",
+    ".....######..######..######.....",
+    ".....######################.....",
+    ".....######################.....",
+    "........################........",
+    "........################........",
+    ".........##.##....##.##.........",
+    ".........##.##....##.##.........",
+    ".........##.##....##.##.........",
+    "................................",
+    "................................",
+    "................................",
+    "................................",
+]
+
+
+def _sleeping_face() -> Image.Image:
+    img = Image.new("RGB", (32, 32), SLEEP_BACK)
+    px = img.load()
+    for y, line in enumerate(SLEEPING):
+        for x, ch in enumerate(line):
+            px[x, y] = SLEEP_COLOURS[ch]
+    return img
+
+
 def render_blank() -> Image.Image:
     """All black — shown on shutdown so a dark panel means nothing is driving it."""
     return Image.new("RGB", (32, 32), (0, 0, 0))
 
 
+def _count_badge(d, count: int) -> None:
+    """Bottom-right digit, shown only when more than one session shares a state."""
+    if count > 1:
+        d.rectangle([26, 25, 31, 31], fill=(0, 0, 0))
+        _digit(d, str(min(count, 9)), 28, 26, WHITE)
+
+
 def render(state: str, count: int, pulse: bool = False) -> Image.Image:
     """State Screen. `pulse` dims the icon for the liveness blink, which runs
     only while a session demands attention (see the staleness ticket)."""
+    if state == "IDLE":
+        # a whole scene rather than a glyph on a field
+        img = _sleeping_face()
+        d = ImageDraw.Draw(img)
+        _count_badge(d, count)
+        return img
     img = Image.new("RGB", (32, 32), COLORS[state])
     d = ImageDraw.Draw(img)
     if state == "OFF":
@@ -234,9 +290,7 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
         return img
     icon, ink = ICONS[state]
     icon(d, ink, pulse)
-    if count > 1:
-        d.rectangle([26, 25, 31, 31], fill=(0, 0, 0))
-        _digit(d, str(min(count, 9)), 28, 26, WHITE)
+    _count_badge(d, count)
     return img
 
 
