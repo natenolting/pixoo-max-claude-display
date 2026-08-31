@@ -2,7 +2,7 @@
 title: Staleness signaling
 labels: [wayfinder:grilling]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: []
 ---
 

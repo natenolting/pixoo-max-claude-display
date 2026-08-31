@@ -2,7 +2,7 @@
 title: Claude Code signal inventory
 labels: [wayfinder:research]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: []
 ---
 

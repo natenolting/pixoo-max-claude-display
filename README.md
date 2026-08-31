@@ -45,19 +45,21 @@ If that last line fails, the venv is on the wrong interpreter. Check with
 by macOS as an audio device and refuses the serial channel we need. The daemon
 unpairs it automatically, but never pair it by hand.
 
-**2. Install the hooks.** Merge the contents of
-[`hooks/user-settings-hooks-snippet.json`](hooks/user-settings-hooks-snippet.json)
-into the `hooks` object of `~/.claude/settings.json`, keeping any hooks already
-there. `SessionEnd` must stay synchronous (`"timeout": 3`, no `"async"`) — an
+**2. Install the hooks.** Step 3 writes `hooks/user-settings-hooks.generated.json`
+with real paths; merge its entries into the `hooks` object of
+`~/.claude/settings.json`, keeping any hooks already there. `SessionEnd` must stay synchronous (`"timeout": 3`, no `"async"`) — an
 async one loses the race against process exit and leaves a phantom session on
 the panel.
 
 **3. Install the launch agent.**
 
 ```bash
-cp launchd/com.natenolting.claude-display.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.natenolting.claude-display.plist
+./scripts/install.sh
 ```
+
+This fills the repo's real location into the launch agent and the hook config
+— launchd does not expand `~`, so both need absolute paths — then loads the
+agent. Use `--render` to see what it would write without installing anything.
 
 **4. Approve Bluetooth.** macOS prompts once, naming *Python*. Allow it. The
 grant belongs to the venv's Python binary, which is the agent's own identity —
@@ -81,8 +83,8 @@ cannot look.
 
 ```bash
 tail -f ~/Library/Logs/claude-display.log                     # watch it
-launchctl kickstart -k gui/$UID/com.natenolting.claude-display  # restart
-launchctl bootout gui/$UID/com.natenolting.claude-display       # stop
+launchctl kickstart -k gui/$UID/local.claude-display  # restart
+launchctl bootout gui/$UID/local.claude-display       # stop
 ```
 
 A **dark panel means nothing is driving it** — the daemon blanks the display
@@ -103,9 +105,9 @@ stopped** — power-cycling underneath a running daemon usually fails, because i
 retries never give the device a quiet moment to come up:
 
 ```bash
-launchctl bootout gui/$UID/com.natenolting.claude-display   # stop first
+launchctl bootout gui/$UID/local.claude-display   # stop first
 # power-cycle the Pixoo, wait a few seconds
-launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.natenolting.claude-display.plist
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/local.claude-display.plist
 ```
 
 If that still fails, reset the Mac's Bluetooth stack with `sudo pkill bluetoothd`
@@ -130,7 +132,7 @@ on exit and the daemon drops it after a 15 s grace. If phantoms persist, check
 that the `SessionEnd` hook is synchronous.
 
 **Nothing in the log at all.** The agent is not running:
-`launchctl print gui/$UID/com.natenolting.claude-display`.
+`launchctl print gui/$UID/local.claude-display`.
 
 ## Configuration
 

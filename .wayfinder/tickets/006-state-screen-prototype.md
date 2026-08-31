@@ -2,7 +2,7 @@
 title: State screen prototype
 labels: [wayfinder:prototype]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: [002-claude-code-signal-inventory, 003-multi-session-semantics]
 ---
 

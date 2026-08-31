@@ -2,7 +2,7 @@
 title: Hardware smoke test
 labels: [wayfinder:task]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: [001-pixoo-max-control-path]
 ---
 

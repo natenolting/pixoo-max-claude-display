@@ -2,7 +2,7 @@
 title: Install as launchd agent
 labels: [wayfinder:task]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: [008-build-state-daemon]
 ---
 
@@ -17,9 +17,9 @@ Includes pairing hygiene: verify device stays unpaired across restarts per
 ## Resolution
 
 Installed 2026-08-30. LaunchAgent at
-[launchd/com.natenolting.claude-display.plist](../../launchd/com.natenolting.claude-display.plist),
+[launchd/local.claude-display.plist.template](../../launchd/local.claude-display.plist.template),
 copied to `~/Library/LaunchAgents/` and loaded with
-`launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.natenolting.claude-display.plist`.
+`launchctl bootstrap gui/$UID ~/Library/LaunchAgents/local.claude-display.plist`.
 RunAtLoad + KeepAlive (throttle 10 s); logs at
 `~/Library/Logs/claude-display.log`.
 
@@ -28,8 +28,8 @@ That grant belongs to the venv Python binary and is the agent's own
 identity — no Terminal dependency anymore. Verified live: agent pid
 running, frames reaching the device (IDLE x2 on the panel).
 
-Manage: `launchctl bootout gui/$UID/com.natenolting.claude-display` stops
-it; `launchctl kickstart -k gui/$UID/com.natenolting.claude-display`
+Manage: `launchctl bootout gui/$UID/local.claude-display` stops
+it; `launchctl kickstart -k gui/$UID/local.claude-display`
 restarts it.
 
 Reboot verified 2026-08-30. `RunAtLoad` works — the agent started at
@@ -42,3 +42,12 @@ Fixed at the source rather than in a runbook: the transport now checks
 pairing is undone automatically and the display comes back by itself.
 [scripts/postboot-check.sh](../../scripts/postboot-check.sh) reports the
 three things a cold boot can break, and `--fix` applies the remedies.
+
+
+## Amendment: label and paths made portable
+
+The agent was originally labelled after its author and the plist carried
+absolute paths for one machine. It is now `local.claude-display`, and the
+plist is a template rendered by
+[scripts/install.sh](../../scripts/install.sh) — launchd does not expand
+`~`, so a checked-in plist would be correct for exactly one person.

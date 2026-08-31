@@ -11,7 +11,7 @@
 
 set -uo pipefail
 ADDR_DASH="11-75-58-6e-bf-c1"
-LABEL="com.natenolting.claude-display"
+LABEL="local.claude-display"
 LOG="$HOME/Library/Logs/claude-display.log"
 FIX=false
 [ "${1:-}" = "--fix" ] && FIX=true

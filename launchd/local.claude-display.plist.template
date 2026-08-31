@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.natenolting.claude-display</string>
+    <string>local.claude-display</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/natenolting/claude-display/.venv/bin/python</string>
+        <string>__REPO__/.venv/bin/python</string>
         <string>-m</string>
         <string>claude_display</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/natenolting/claude-display</string>
+    <string>__REPO__</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
@@ -22,8 +22,8 @@
     <key>ExitTimeOut</key>
     <integer>10</integer>
     <key>StandardOutPath</key>
-    <string>/Users/natenolting/Library/Logs/claude-display.log</string>
+    <string>__HOME__/Library/Logs/claude-display.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/natenolting/Library/Logs/claude-display.log</string>
+    <string>__HOME__/Library/Logs/claude-display.log</string>
 </dict>
 </plist>

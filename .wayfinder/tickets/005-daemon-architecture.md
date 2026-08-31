@@ -2,7 +2,7 @@
 title: Daemon architecture
 labels: [wayfinder:grilling]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: [001-pixoo-max-control-path, 002-claude-code-signal-inventory, 003-multi-session-semantics]
 ---
 

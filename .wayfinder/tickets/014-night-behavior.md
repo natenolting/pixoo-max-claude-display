@@ -2,7 +2,7 @@
 title: Brightness and night behavior
 labels: [wayfinder:grilling]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: []
 ---
 

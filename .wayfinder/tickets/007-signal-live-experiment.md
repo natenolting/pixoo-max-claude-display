@@ -2,7 +2,7 @@
 title: Signal live experiment
 labels: [wayfinder:task]
 status: closed
-assignee: natenolting
+assignee: owner
 blocked-by: []
 ---
 
