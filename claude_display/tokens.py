@@ -10,13 +10,32 @@ enormous every day and therefore uninformative at a glance.
 """
 
 import json
+import os
+import shutil
 import subprocess
 import threading
-import time
 from datetime import date
 
 POLL_INTERVAL_S = 300
 CCUSAGE_TIMEOUT_S = 90
+
+# launchd hands agents a bare PATH (/usr/bin:/bin:/usr/sbin:/sbin), which does
+# not include Homebrew, so npx is invisible unless we go looking for it
+NPX_FALLBACKS = (
+    "/opt/homebrew/bin/npx",
+    "/usr/local/bin/npx",
+    os.path.expanduser("~/.local/bin/npx"),
+)
+
+
+def _find_npx() -> str | None:
+    found = shutil.which("npx")
+    if found:
+        return found
+    for path in NPX_FALLBACKS:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
 
 
 def _today_input_output(payload: dict, today: str) -> int | None:
@@ -30,17 +49,46 @@ def _today_input_output(payload: dict, today: str) -> int | None:
 
 
 def fetch(today: str | None = None) -> int | None:
+    """Today's input+output count, or None with a reason logged.
+
+    Every failure path is reported: a silent None cannot be told apart from
+    a genuine "no usage yet today", which hid a missing npx for a full
+    deploy cycle.
+    """
     today = today or date.today().isoformat()
+    npx = _find_npx()
+    if npx is None:
+        print("[tokens] npx not found; token screen will stay blank")
+        return None
+    # npx shells out to node, which is in the same bin directory and equally
+    # invisible on launchd's PATH — hand the child a PATH that includes it
+    env = dict(os.environ)
+    env["PATH"] = os.pathsep.join(
+        [os.path.dirname(npx), env.get("PATH", "/usr/bin:/bin")]
+    )
     try:
         out = subprocess.run(
-            ["npx", "ccusage", "daily", "--json"],
-            capture_output=True, text=True, timeout=CCUSAGE_TIMEOUT_S,
+            [npx, "ccusage", "daily", "--json"],
+            capture_output=True, text=True, timeout=CCUSAGE_TIMEOUT_S, env=env,
         )
-        if out.returncode != 0:
-            return None
-        return _today_input_output(json.loads(out.stdout), today)
-    except (subprocess.SubprocessError, OSError, json.JSONDecodeError, ValueError):
+    except subprocess.TimeoutExpired:
+        print(f"[tokens] ccusage timed out after {CCUSAGE_TIMEOUT_S}s")
         return None
+    except (subprocess.SubprocessError, OSError) as e:
+        print(f"[tokens] could not run ccusage: {e}")
+        return None
+    if out.returncode != 0:
+        print(f"[tokens] ccusage exited {out.returncode}: "
+              f"{out.stderr.strip()[:120]}")
+        return None
+    try:
+        value = _today_input_output(json.loads(out.stdout), today)
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"[tokens] could not parse ccusage output: {e}")
+        return None
+    if value is None:
+        print(f"[tokens] no row for {today} in ccusage output")
+    return value
 
 
 class TokenPoller:
