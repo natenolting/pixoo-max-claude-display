@@ -181,6 +181,35 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     return img
 
 
+# The Claude mascot, traced from assets/claude-guy.png and baked in as a
+# literal: the daemon must never fail to draw a face because a file moved.
+# Near-identical source shades are collapsed to two, since the wire format is
+# palette-indexed and every extra colour costs frame bytes.
+MASCOT_BODY = (218, 119, 87)
+MASCOT_EYE = (248, 248, 248)
+MASCOT = [
+    ".BBBBBB.",
+    ".BEBBEB.",
+    "BBBBBBBB",
+    "BBBBBBBB",
+    ".BBBBBB.",
+    ".B....B.",
+]
+
+
+def _mascot(d, x, y, scale=1, level=1.0):
+    """Draw the mascot with its top-left at (x, y)."""
+    body = tuple(int(round(c * level)) for c in MASCOT_BODY)
+    eye = tuple(int(round(c * level)) for c in MASCOT_EYE)
+    for row, line in enumerate(MASCOT):
+        for col, ch in enumerate(line):
+            if ch == ".":
+                continue
+            px, py = x + col * scale, y + row * scale
+            d.rectangle([px, py, px + scale - 1, py + scale - 1],
+                        fill=body if ch == "B" else eye)
+
+
 def render_blank() -> Image.Image:
     """All black — shown on shutdown so a dark panel means nothing is driving it."""
     return Image.new("RGB", (32, 32), (0, 0, 0))
@@ -192,7 +221,10 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
     img = Image.new("RGB", (32, 32), COLORS[state])
     d = ImageDraw.Draw(img)
     if state == "OFF":
-        d.point([(31, 31)], fill=(30, 30, 30))
+        # a resting mascot, not near-blackness: this face used to be almost
+        # indistinguishable from the blank panel shown when the daemon has
+        # stopped, which undercut "dark means nothing is driving it"
+        _mascot(d, 8, 10, scale=2, level=0.75)
         return img
     icon, ink = ICONS[state]
     icon(d, ink, pulse)
