@@ -117,6 +117,7 @@ def main(argv=None) -> int:
 
     last_shown = None
     last_logged = None
+    last_aggregate = None
     unreachable_logged = False
     last_outage_notice = time.monotonic()
     last_push = 0.0
@@ -147,6 +148,14 @@ def main(argv=None) -> int:
             last_lock_poll = mono
 
         state, count = store.aggregate()
+        # Any change of state snaps back to the State Screen, so work that
+        # starts while a number face is up is seen immediately. Without this
+        # the panel only showed a change if the state face happened to be its
+        # turn — brief work could begin and end inside a number slot and never
+        # appear at all, which reads as the display ignoring you.
+        if (state, count) != last_aggregate:
+            rotation_start = mono
+            last_aggregate = (state, count)
         if state in DEMANDS_ATTENTION:
             rotation_start = mono
         blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
