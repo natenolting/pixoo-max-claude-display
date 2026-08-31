@@ -85,4 +85,5 @@ TRACK_CMUX_SESSIONS = get("TRACK_CMUX_SESSIONS", True, _as_bool)
 # --- behaviour ------------------------------------------------------------
 WAITING_DEMOTION_S = get("WAITING_DEMOTION_MIN", 30, int) * 60
 TOKEN_POLL_S = get("TOKEN_POLL_MIN", 5, int) * 60
+USAGE_POLL_S = get("USAGE_POLL_MIN", 2, int) * 60
 SPOOL_DIR = get("SPOOL_DIR", "/tmp/claude-display/spool")

@@ -23,7 +23,6 @@ from .state import SessionStore
 
 DRY_RUN_FRAME = "/tmp/claude-display/frame.png"
 FORCED_REFRESH_S = 30
-USAGE_POLL_S = 60
 LOCK_POLL_S = 5
 STATE_FACE_S = config.STATE_FACE_S
 # a face turned off in config gets no time in the rotation
@@ -136,11 +135,12 @@ def main(argv=None) -> int:
     last_outage_notice = time.monotonic()
     last_push = 0.0
     shown_brightness = None
-    util = usage.read()
     away = brightness.is_away()
+    usage_poller = usage.UsagePoller()
+    usage_poller.start()  # live figures; the cache goes stale unnoticed
     token_poller = tokens_mod.TokenPoller()
     token_poller.start()  # ccusage is far too slow to run inline
-    last_usage_poll = last_lock_poll = last_sweep = time.monotonic()
+    last_lock_poll = last_sweep = time.monotonic()
     rotation_start = time.monotonic()
     _log("[daemon] up; spool=" + args.spool,
          "DRY RUN" if args.dry_run else "device=" + args.address)
@@ -153,9 +153,6 @@ def main(argv=None) -> int:
         if mono - last_sweep >= SWEEP_S:
             store.sweep(sweeper.sweep())
             last_sweep = mono
-        if mono - last_usage_poll >= USAGE_POLL_S:
-            util = usage.read()
-            last_usage_poll = mono
         if mono - last_lock_poll >= LOCK_POLL_S:
             away = brightness.is_away()
             last_lock_poll = mono
@@ -174,7 +171,7 @@ def main(argv=None) -> int:
         # the working burst runs on its own faster clock than the blink
         phase = (int(mono / ANIM_FRAME_S) if state == "WORKING"
                  else int(mono / BLINK_HALF_PERIOD_S))
-        face = choose_face(state, count, util, token_poller.value(),
+        face = choose_face(state, count, usage_poller.value(), token_poller.value(),
                            mono - rotation_start, phase)
 
         want_brightness = brightness.target(
@@ -228,6 +225,7 @@ def main(argv=None) -> int:
     # nothing is driving it, rather than a stale frame that looks healthy
     _log("[daemon] shutting down")
     token_poller.stop()
+    usage_poller.stop()
     if args.dry_run:
         render_blank().save(DRY_RUN_FRAME)
     elif transport is not None:
