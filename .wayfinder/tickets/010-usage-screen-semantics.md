@@ -2,7 +2,7 @@
 title: Usage screen semantics
 labels: [wayfinder:grilling]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: []
 ---
 

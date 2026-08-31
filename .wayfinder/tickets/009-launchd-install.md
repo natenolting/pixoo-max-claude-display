@@ -2,7 +2,7 @@
 title: Install as launchd agent
 labels: [wayfinder:task]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: [008-build-state-daemon]
 ---
 

@@ -2,7 +2,7 @@
 title: Build the state-screen daemon
 labels: [wayfinder:task]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: [007-signal-live-experiment]
 ---
 

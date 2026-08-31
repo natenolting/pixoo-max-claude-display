@@ -2,7 +2,7 @@
 title: Claude Code signal inventory
 labels: [wayfinder:research]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: []
 ---
 

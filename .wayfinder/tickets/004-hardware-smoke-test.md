@@ -2,7 +2,7 @@
 title: Hardware smoke test
 labels: [wayfinder:task]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: [001-pixoo-max-control-path]
 ---
 

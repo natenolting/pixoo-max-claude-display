@@ -2,7 +2,7 @@
 title: State screen prototype
 labels: [wayfinder:prototype]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: [002-claude-code-signal-inventory, 003-multi-session-semantics]
 ---
 

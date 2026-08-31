@@ -2,7 +2,7 @@
 title: Signal live experiment
 labels: [wayfinder:task]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: []
 ---
 

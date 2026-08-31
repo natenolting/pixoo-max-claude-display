@@ -2,7 +2,7 @@
 title: Pixoo Max control path
 labels: [wayfinder:research]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: []
 ---
 

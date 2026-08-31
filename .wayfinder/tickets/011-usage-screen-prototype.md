@@ -2,7 +2,7 @@
 title: Usage screen prototype
 labels: [wayfinder:prototype]
 status: closed
-assignee: nate.nolting@paulbunyan.coop
+assignee: natenolting
 blocked-by: [010-usage-screen-semantics]
 ---
 
