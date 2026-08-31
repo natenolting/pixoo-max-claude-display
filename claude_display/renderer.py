@@ -40,26 +40,40 @@ def _digit(d, ch, ox, oy, color):
                 d.point([(ox + col, oy + row)], fill=color)
 
 
-def _bang(d, color):
-    d.rectangle([14, 6, 17, 18], fill=color)
-    d.rectangle([14, 22, 17, 25], fill=color)
+PULSE_LEVEL = 0.45
 
 
-def _hourglass(d, color):
-    d.line([10, 7, 21, 7], fill=color)
-    d.line([10, 24, 21, 24], fill=color)
-    d.line([10, 8, 15, 15], fill=color)
-    d.line([21, 8, 16, 15], fill=color)
-    d.line([10, 23, 15, 16], fill=color)
-    d.line([21, 23, 16, 16], fill=color)
-    d.polygon([(13, 21), (18, 21), (15, 18)], fill=color)
+def _dim(color, factor=PULSE_LEVEL):
+    return tuple(int(round(c * factor)) for c in color)
 
 
-def _play(d, color):
+def _bang(d, color, pulse=False):
+    ink = _dim(color) if pulse else color
+    d.rectangle([14, 6, 17, 18], fill=ink)
+    d.rectangle([14, 22, 17, 25], fill=ink)
+
+
+def _caret(d, color, pulse=False):
+    """A terminal prompt: solid chevron, cursor block blinking beside it.
+
+    An hourglass was here first and meant the opposite of what everyone
+    reads it as — every OS uses it for "the machine is busy", while this
+    state means the machine is done and you are the holdup. The cursor
+    block blinks off on alternate frames the way a real prompt does, which
+    also supplies the liveness motion the pulse used to provide.
+    """
+    for t in range(3):
+        d.line([9, 9 + t, 15, 15 + t], fill=color)
+        d.line([9, 23 - t, 15, 17 - t], fill=color)
+    if not pulse:
+        d.rectangle([18, 9, 23, 23], fill=color)
+
+
+def _play(d, color, pulse=False):
     d.polygon([(11, 8), (11, 24), (23, 16)], fill=color)
 
 
-def _zzz(d, color):
+def _zzz(d, color, pulse=False):
     for ox, oy, s in [(8, 8, 2), (16, 14, 2), (12, 21, 1)]:
         w = 3 * s
         d.line([ox, oy, ox + w, oy], fill=color)
@@ -69,7 +83,7 @@ def _zzz(d, color):
 
 ICONS = {
     "NEEDS_PERMISSION": (_bang, WHITE),
-    "WAITING": (_hourglass, WHITE),
+    "WAITING": (_caret, WHITE),
     "WORKING": (_play, WHITE),
     "IDLE": (_zzz, IDLE_INK),
 }
@@ -167,13 +181,6 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     return img
 
 
-PULSE_LEVEL = 0.45
-
-
-def _dim(color, factor=PULSE_LEVEL):
-    return tuple(int(round(c * factor)) for c in color)
-
-
 def render_blank() -> Image.Image:
     """All black — shown on shutdown so a dark panel means nothing is driving it."""
     return Image.new("RGB", (32, 32), (0, 0, 0))
@@ -188,7 +195,7 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
         d.point([(31, 31)], fill=(30, 30, 30))
         return img
     icon, ink = ICONS[state]
-    icon(d, _dim(ink) if pulse else ink)
+    icon(d, ink, pulse)
     if count > 1:
         d.rectangle([26, 25, 31, 31], fill=(0, 0, 0))
         _digit(d, str(min(count, 9)), 28, 26, WHITE)

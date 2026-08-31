@@ -42,3 +42,22 @@ firmware then refuses SPP/RFCOMM. Reliable recipe, proven repeatedly:
 ~1 s settle, then write frames. Requires Bluetooth TCC grant on the host
 process (Terminal has it; Claude's embedded shell does not — daemon needs
 its own grant).
+
+
+## Amendment, 2026-08-30: hourglass replaced with a prompt caret
+
+The WAITING icon was an hourglass, which inverts the convention every
+operating system has used for decades: an hourglass means *the machine is
+busy, wait*, while this state means the machine is finished and the user is
+the holdup. The user asked what the screen was for — the tell that the icon
+was not carrying its meaning.
+
+It is now a terminal prompt: a solid chevron with a cursor block that blinks
+off on alternate frames, at the user's suggestion. That reads as "the prompt
+is waiting for you", and the blink supplies the liveness motion the dimming
+pulse used to provide. Rejected alternatives: a chevron with an underscore
+cursor (too visually light at this size) and an arrow pointing at the viewer
+(says "you" but not what is wanted).
+
+Icon functions now take the pulse phase and decide what it means for them,
+so NEEDS-PERMISSION keeps dimming its mark while WAITING blinks its cursor.
