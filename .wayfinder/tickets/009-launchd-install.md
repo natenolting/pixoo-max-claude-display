@@ -32,6 +32,13 @@ Manage: `launchctl bootout gui/$UID/com.natenolting.claude-display` stops
 it; `launchctl kickstart -k gui/$UID/com.natenolting.claude-display`
 restarts it.
 
-Untested until the next reboot: RunAtLoad auto-start (expected to work)
-and pairing hygiene after restart — if the display goes dead after a
-reboot, check `blueutil --paired` first per ADR 0001.
+Reboot verified 2026-08-30. `RunAtLoad` works — the agent started at
+login on its own. But the panel stayed dark: **macOS re-paired the Pixoo
+during boot**, and a paired device refuses RFCOMM (ADR 0001), so the
+daemon sat in its backoff loop logging `RFCOMM open status: None`.
+
+Fixed at the source rather than in a runbook: the transport now checks
+`isPaired()` and calls `remove()` on every connect attempt, so the
+pairing is undone automatically and the display comes back by itself.
+[scripts/postboot-check.sh](../../scripts/postboot-check.sh) reports the
+three things a cold boot can break, and `--fix` applies the remedies.

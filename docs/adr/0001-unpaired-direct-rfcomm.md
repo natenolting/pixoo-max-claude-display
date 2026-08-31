@@ -30,3 +30,16 @@ connect.
 - Device firmware wedges if a session dies unclosed; recovery is a device
   power cycle. The daemon must treat clean channel close as a correctness
   requirement, not a courtesy.
+
+## Addendum, 2026-08-30: macOS re-pairs across a reboot
+
+A cold boot was verified end to end. The launchd agent started correctly at
+login, but the panel stayed dark: macOS had re-paired the Pixoo during
+startup, so RFCOMM opens timed out (`open status: None`) exactly as this
+ADR predicts. `RunAtLoad` is not sufficient on its own.
+
+The daemon now undoes this itself. `_connect()` checks
+`IOBluetoothDevice.isPaired()` and calls `remove()` before opening the
+baseband link, using the Bluetooth grant the agent already holds. Pairing
+is therefore reverted on every connect and every backoff retry, so the
+display recovers without anyone noticing it was gone.

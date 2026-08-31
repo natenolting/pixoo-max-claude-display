@@ -58,14 +58,16 @@ fi
 
 # 3. are frames actually landing?
 if [ -f "$LOG" ]; then
-    recent=$(tail -20 "$LOG")
+    # the log survives reboots, so only consider lines since the daemon's
+    # most recent start — otherwise pre-reboot history reads as healthy
+    recent=$(awk '/^\[daemon\] up;/{buf=""} {buf=buf $0 ORS} END{printf "%s", buf}' "$LOG")
     if grep -q "device unreachable" <<<"$recent"; then
         echo "FAIL  daemon cannot reach the panel (last 20 log lines)"
         fail=1
     elif grep -qE "^\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|usage)" <<<"$recent"; then
         echo "OK    frames pushing — last: $(grep -E '^\[daemon\]' <<<"$recent" | tail -1)"
     else
-        echo "WARN  no recent frame activity in the log"
+        echo "WARN  agent started but has not pushed a frame yet"
     fi
 else
     echo "FAIL  no log at $LOG"
@@ -83,6 +85,10 @@ fi
 if [ "$fail" -eq 0 ]; then
     echo "--> display is healthy"
 else
-    echo "--> problems found${FIX:+ (fix attempted above)}; if the panel is still dark, power-cycle the Pixoo and rerun"
+    if $FIX; then
+        echo "--> problems found; fix attempted above. If the panel is still dark, power-cycle the Pixoo and rerun"
+    else
+        echo "--> problems found. Rerun with --fix to apply the fixes above"
+    fi
 fi
 exit "$fail"

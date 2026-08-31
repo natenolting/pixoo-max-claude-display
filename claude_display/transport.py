@@ -123,6 +123,16 @@ class PixooTransport:
         import IOBluetooth
 
         dev = IOBluetooth.IOBluetoothDevice.deviceWithAddressString_(self.address)
+        # macOS re-pairs the Pixoo on its own (notably across a reboot), and a
+        # paired device is claimed as an audio peripheral and refuses RFCOMM
+        # — see ADR 0001. Undo it before every connect rather than leaving the
+        # user to notice a dark panel.
+        try:
+            if dev.isPaired():
+                err = dev.remove()
+                print(f"[transport] device was paired; unpaired (result {err})")
+        except Exception as e:
+            print(f"[transport] could not check/undo pairing: {e}")
         if not dev.isConnected():
             err = dev.openConnection()
             if err != 0:
