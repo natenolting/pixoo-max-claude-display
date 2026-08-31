@@ -30,6 +30,10 @@ USAGE_FACE_S = config.USAGE_FACE_S if config.SHOW_USAGE_FACE else 0
 TOKENS_FACE_S = config.TOKENS_FACE_S if config.SHOW_TOKENS_FACE else 0
 # states that hold the display alone — never hide "Claude needs you"
 DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
+# ...but only a blocked prompt is urgent enough to also freeze the rotation.
+# WAITING held the panel still for up to the full demotion window, which with
+# a fleet of sessions meant one finished turn stopped the display moving.
+HOLDS_ROTATION = ("NEEDS_PERMISSION",)
 # half-period of the attention pulse; motion is the only proof of liveness,
 # since a frame frozen by a lost link can never be overwritten with a marker
 BLINK_HALF_PERIOD_S = 1.0
@@ -64,11 +68,13 @@ def choose_face(state, count, util, token_count, clock, blink=False):
     first once things calm down. `blink` is the pulse phase, carried in the
     key so the daemon redraws on every phase flip.
     """
-    if state in DEMANDS_ATTENTION:
+    if state in HOLDS_ROTATION:
         return ("state", state, count, blink)
     pos = clock % (STATE_FACE_S + USAGE_FACE_S + TOKENS_FACE_S)
     if pos < STATE_FACE_S:
-        return ("state", state, count, False)
+        # a state that demands attention keeps pulsing during its rotation
+        # slot, even though it no longer holds the panel to itself
+        return ("state", state, count, blink if state in DEMANDS_ATTENTION else False)
     if pos < STATE_FACE_S + USAGE_FACE_S:
         return ("usage", util.five_hour, util.seven_day)
     return ("tokens", token_count)
@@ -155,7 +161,7 @@ def main(argv=None) -> int:
         if (state, count) != last_aggregate:
             rotation_start = mono
             last_aggregate = (state, count)
-        if state in DEMANDS_ATTENTION:
+        if state in HOLDS_ROTATION:
             rotation_start = mono
         blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
         face = choose_face(state, count, util, token_poller.value(),

@@ -1,6 +1,6 @@
 """Session state store: hook events + registry sweeps in, Aggregate State out.
 
-Semantics per CONTEXT.md: precedence NEEDS_PERMISSION > WAITING > WORKING >
+Semantics per CONTEXT.md: precedence NEEDS_PERMISSION > WORKING > WAITING >
 IDLE; WAITING demotes to IDLE after a configurable delay;
 NEEDS_PERMISSION never demotes.
 """
@@ -10,7 +10,12 @@ from dataclasses import dataclass, field
 
 from . import config
 
-PRECEDENCE = ["NEEDS_PERMISSION", "WAITING", "WORKING", "IDLE"]
+# WORKING outranks WAITING: live work clears itself, so showing it costs
+# nothing — the waiting signal reappears the moment nothing is running. The
+# reverse order froze the panel on whichever session had most recently
+# finished, masking every other session actually doing something. A blocked
+# permission prompt still wins outright, since it stalls work until acted on.
+PRECEDENCE = ["NEEDS_PERMISSION", "WORKING", "WAITING", "IDLE"]
 WAITING_DEMOTION_S = config.WAITING_DEMOTION_S
 # a clean exit DELETES the session's registry file (no dead-pid row ever
 # appears) and the async SessionEnd hook can lose the race against process

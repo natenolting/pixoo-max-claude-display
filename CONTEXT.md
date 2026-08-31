@@ -19,7 +19,10 @@ Glossary of the ubiquitous language. No implementation details here.
   - **OFF** — not a per-session state: the Aggregate State when no Tracked
     Sessions are live.
 - **Precedence** — ordering that decides which Session State wins when
-  sessions disagree: NEEDS-PERMISSION > WAITING > WORKING > IDLE.
+  sessions disagree: NEEDS-PERMISSION > WORKING > WAITING > IDLE. Live work
+  outranks a finished turn because it clears itself: the waiting signal
+  returns the moment nothing is running, whereas the reverse order let one
+  finished session mask every other session actually doing something.
 - **Aggregate State** — the single state shown on the display: the highest-
   precedence Session State across all Tracked Sessions, or OFF when there
   are none.
@@ -34,9 +37,9 @@ Glossary of the ubiquitous language. No implementation details here.
 - **Five-Hour Utilization** — the percentage of the rolling five-hour rate
   limit consumed, with the instant it resets.
 - **Seven-Day Utilization** — the same for the rolling seven-day limit.
-- **Rotation** — which face the display shows. The State Screen holds the
-  display alone whenever the Aggregate State is NEEDS-PERMISSION or
-  WAITING; otherwise the two faces alternate.
+- **Rotation** — which face the display shows. Only NEEDS-PERMISSION holds
+  the display alone; every other state takes its turn with the info faces,
+  and any change of Aggregate State brings the State Screen up at once.
 - **Pulse** — the alternation of the State Screen icon while a session
   demands attention. It is both an attention signal and the only available
   proof that the display is still live: a frame frozen by a lost link can

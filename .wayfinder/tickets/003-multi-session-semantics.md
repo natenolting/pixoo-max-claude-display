@@ -42,3 +42,21 @@ session and never reacted to their actual work.
 
 They are now tracked by default, with `TRACK_CMUX_SESSIONS=false` restoring
 the exclusion for anyone whose cmux sessions genuinely are background.
+
+
+## Amendment: WORKING now outranks WAITING
+
+The original order put WAITING above WORKING — with one session, "you are
+the holdup" beating "it is busy" was right. With a fleet it inverted: some
+session has nearly always just finished a turn, so a stale WAITING masked
+every session actually working, and because WAITING also froze the
+rotation, the panel sat on the amber caret for up to the full demotion
+window. The display looked broken while behaving exactly as specified.
+
+Precedence is now NEEDS-PERMISSION > WORKING > WAITING > IDLE, and only
+NEEDS-PERMISSION freezes the rotation. Nothing is lost: live work clears
+itself, so the waiting signal resurfaces as soon as the work stops.
+
+This separated two ideas that had been one constant: which states pulse
+(attention) and which hold the panel alone (rotation). A test caught the
+regression where WAITING silently stopped pulsing.
