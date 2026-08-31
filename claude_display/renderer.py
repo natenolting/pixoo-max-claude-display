@@ -170,14 +170,17 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     w, gap = (11, 3) if len(text) <= 2 else (8, 1)
     _big_number(d, text, 13, 2, 19, c5, w, gap)
     _letter(d, "%", 26, 14, c5)
-    d.rectangle([1, 24, 30, 27], outline=BAR_TRACK)
-    fill = int(round(28 * min(five_hour, 100) / 100))
+    # the mascot takes the bottom-left corner and both bars start after it;
+    # a shorter bar costs less legibility than a smaller numeral would
+    _mascot(d, 1, 24, scale=1, level=0.8)
+    d.rectangle([10, 24, 30, 27], outline=BAR_TRACK)
+    fill = int(round(19 * min(five_hour, 100) / 100))
     if fill:
-        d.rectangle([2, 25, 1 + fill, 26], fill=c5)
-    d.rectangle([1, 29, 30, 30], fill=BAR_TRACK_DIM)
-    fill7 = int(round(30 * min(seven_day, 100) / 100))
+        d.rectangle([11, 25, 10 + fill, 26], fill=c5)
+    d.rectangle([10, 29, 30, 30], fill=BAR_TRACK_DIM)
+    fill7 = int(round(21 * min(seven_day, 100) / 100))
     if fill7:
-        d.rectangle([1, 29, fill7, 30], fill=_severity(seven_day))
+        d.rectangle([10, 29, 9 + fill7, 30], fill=_severity(seven_day))
     return img
 
 
