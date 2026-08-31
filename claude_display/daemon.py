@@ -163,8 +163,10 @@ def main(argv=None) -> int:
                 unreachable_logged = False
                 last_shown = face
                 last_push = now
-            elif not unreachable_logged:
-                # say it once per outage, not once per second
+            elif not unreachable_logged and transport is not None \
+                    and transport.down_for() > 0:
+                # say it once per outage, not once per second — and not at all
+                # while the startup settle window is simply waiting to try
                 print(f"[daemon] {label} (device unreachable, will retry)")
                 unreachable_logged = True
                 last_outage_notice = mono
