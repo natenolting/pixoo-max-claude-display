@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 COLORS = {
     "NEEDS_PERMISSION": (200, 0, 0),
     "WAITING": (210, 130, 0),
-    "WORKING": (0, 70, 200),
+    "WORKING": (0, 0, 0),
     "OFF": (0, 0, 0),
 }
 
@@ -47,13 +47,13 @@ def _dim(color, factor=PULSE_LEVEL):
     return tuple(int(round(c * factor)) for c in color)
 
 
-def _bang(d, color, pulse=False):
-    ink = _dim(color) if pulse else color
+def _bang(d, color, phase=0):
+    ink = _dim(color) if phase % 2 else color
     d.rectangle([14, 6, 17, 18], fill=ink)
     d.rectangle([14, 22, 17, 25], fill=ink)
 
 
-def _caret(d, color, pulse=False):
+def _caret(d, color, phase=0):
     """A terminal prompt: solid chevron, cursor block blinking beside it.
 
     An hourglass was here first and meant the opposite of what everyone
@@ -65,19 +65,38 @@ def _caret(d, color, pulse=False):
     for t in range(3):
         d.line([9, 9 + t, 15, 15 + t], fill=color)
         d.line([9, 23 - t, 15, 17 - t], fill=color)
-    if not pulse:
+    if not phase % 2:
         d.rectangle([18, 9, 23, 23], fill=color)
 
 
-def _play(d, color, pulse=False):
-    d.polygon([(11, 8), (11, 24), (23, 16)], fill=color)
+# The Claude burst, breathing: arms reach out and draw back. Rotation was
+# tried first, but an eight-fold symmetric shape rotating at 32 pixels lands
+# on nearly the same pixels each step and reads as jitter. A changing
+# silhouette survives the low frame rate the Bluetooth link allows.
+BREATHE_RADII = (9, 10, 11, 12, 13, 12, 11, 10)
+
+
+def _burst(d, color, r_out, arms=8, r_in=2, thick=1.6, taper=1.1):
+    import math
+
+    for i in range(arms):
+        a = math.radians(i * 360 / arms)
+        for t in range(r_in, r_out + 1):
+            x, y = 15.5 + math.cos(a) * t, 15.5 - math.sin(a) * t
+            w = thick - taper * ((t - r_in) / max(1, r_out - r_in))
+            if w > 0:
+                d.ellipse([x - w, y - w, x + w, y + w], fill=color)
+
+
+def _working(d, color, phase=0):
+    _burst(d, color, BREATHE_RADII[phase % len(BREATHE_RADII)])
 
 
 # IDLE has no icon entry: it renders a whole scene, not a glyph on a field
 ICONS = {
     "NEEDS_PERMISSION": (_bang, WHITE),
     "WAITING": (_caret, WHITE),
-    "WORKING": (_play, WHITE),
+    "WORKING": (_working, (217, 119, 87)),
 }
 
 
@@ -272,10 +291,10 @@ def _count_badge(d, count: int) -> None:
         _digit(d, str(min(count, 9)), 28, 26, WHITE)
 
 
-def render(state: str, count: int, pulse: bool = False) -> Image.Image:
-    """State Screen. `pulse` is the liveness-blink phase, which runs only
-    while a session demands attention; each icon decides what it means for
-    itself (see the staleness ticket)."""
+def render(state: str, count: int, phase: int = 0) -> Image.Image:
+    """State Screen. `phase` advances over time and each icon decides what it
+    means: the permission mark dims on alternate phases, the waiting cursor
+    blinks, and the working burst breathes through its frames."""
     if state == "IDLE":
         # a whole scene rather than a glyph on a field
         img = _sleeping_face()
@@ -291,7 +310,7 @@ def render(state: str, count: int, pulse: bool = False) -> Image.Image:
         _mascot(d, 8, 10, scale=2, level=0.75)
         return img
     icon, ink = ICONS[state]
-    icon(d, ink, pulse)
+    icon(d, ink, phase)
     _count_badge(d, count)
     return img
 

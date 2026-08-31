@@ -1,7 +1,8 @@
 """Main loop: spool + registry in, frames out.
 
-Cadence per the daemon-architecture ticket: 1 s ticks (spool drain +
-render check), registry sweep every 3rd tick, forced refresh every 30 s.
+Cadence: a short tick so the working burst can animate, with the registry
+sweep, usage read and lock check gated on elapsed time rather than counted
+in ticks; forced refresh every 30 s.
 Rotation per the usage-screen semantics ticket: the State Screen holds the
 display alone whenever a session needs the user; otherwise the faces take
 turns.
@@ -34,9 +35,17 @@ DEMANDS_ATTENTION = ("NEEDS_PERMISSION", "WAITING")
 # WAITING held the panel still for up to the full demotion window, which with
 # a fleet of sessions meant one finished turn stopped the display moving.
 HOLDS_ROTATION = ("NEEDS_PERMISSION",)
+# states whose icon changes over time, and so must carry the phase
+ANIMATED = DEMANDS_ATTENTION + ("WORKING",)
 # half-period of the attention pulse; motion is the only proof of liveness,
 # since a frame frozen by a lost link can never be overwritten with a marker
 BLINK_HALF_PERIOD_S = 1.0
+# The loop used to tick once a second, which is too slow to animate. Frames
+# take roughly a third of a second to push, so this is about as fast as the
+# link sustains; the polls below are time-gated rather than counted in ticks.
+TICK_S = 0.25
+SWEEP_S = 3
+ANIM_FRAME_S = 0.35
 # how long the panel may stay dark before the log says so again; a single
 # "unreachable" line an hour ago is indistinguishable from a brief blip
 OUTAGE_REMINDER_S = 300
@@ -60,21 +69,21 @@ def outage_announcement(down_for, already_logged, since_last_notice):
     return None
 
 
-def choose_face(state, count, util, token_count, clock, blink=False):
+def choose_face(state, count, util, token_count, clock, phase=0):
     """Pick the face to show. Returns a tuple that doubles as a change key.
 
     `clock` is seconds since rotation last became eligible; it resets while
     a session demands attention so the State Screen always gets a full turn
     first once things calm down. `blink` is the pulse phase, carried in the
-    key so the daemon redraws on every phase flip.
+    key so the daemon redraws whenever the phase advances.
     """
     if state in HOLDS_ROTATION:
-        return ("state", state, count, blink)
+        return ("state", state, count, phase)
     pos = clock % (STATE_FACE_S + USAGE_FACE_S + TOKENS_FACE_S)
     if pos < STATE_FACE_S:
         # a state that demands attention keeps pulsing during its rotation
         # slot, even though it no longer holds the panel to itself
-        return ("state", state, count, blink if state in DEMANDS_ATTENTION else False)
+        return ("state", state, count, phase if state in ANIMATED else 0)
     if pos < STATE_FACE_S + USAGE_FACE_S:
         return ("usage", util.five_hour, util.seven_day)
     return ("tokens", token_count)
@@ -85,7 +94,7 @@ def render_face(face):
         return render_usage(face[1], face[2])
     if face[0] == "tokens":
         return render_tokens(face[1])
-    return render(face[1], face[2], pulse=face[3])
+    return render(face[1], face[2], phase=face[3])
 
 
 def main(argv=None) -> int:
@@ -127,12 +136,11 @@ def main(argv=None) -> int:
     last_outage_notice = time.monotonic()
     last_push = 0.0
     shown_brightness = None
-    tick = 0
     util = usage.read()
     away = brightness.is_away()
     token_poller = tokens_mod.TokenPoller()
-    token_poller.start()  # ccusage is far too slow for the 1 s tick
-    last_usage_poll = last_lock_poll = time.monotonic()
+    token_poller.start()  # ccusage is far too slow to run inline
+    last_usage_poll = last_lock_poll = last_sweep = time.monotonic()
     rotation_start = time.monotonic()
     _log("[daemon] up; spool=" + args.spool,
          "DRY RUN" if args.dry_run else "device=" + args.address)
@@ -140,11 +148,11 @@ def main(argv=None) -> int:
     while running:
         for event in spool.drain():
             store.ingest(event)
-        if tick % 3 == 0:
-            store.sweep(sweeper.sweep())
-        tick += 1
 
         mono = time.monotonic()
+        if mono - last_sweep >= SWEEP_S:
+            store.sweep(sweeper.sweep())
+            last_sweep = mono
         if mono - last_usage_poll >= USAGE_POLL_S:
             util = usage.read()
             last_usage_poll = mono
@@ -163,9 +171,11 @@ def main(argv=None) -> int:
             last_aggregate = (state, count)
         if state in HOLDS_ROTATION:
             rotation_start = mono
-        blink = int(mono / BLINK_HALF_PERIOD_S) % 2 == 1
+        # the working burst runs on its own faster clock than the blink
+        phase = (int(mono / ANIM_FRAME_S) if state == "WORKING"
+                 else int(mono / BLINK_HALF_PERIOD_S))
         face = choose_face(state, count, util, token_poller.value(),
-                           mono - rotation_start, blink)
+                           mono - rotation_start, phase)
 
         want_brightness = brightness.target(
             away, brightness.in_night_window(), state in DEMANDS_ATTENTION
@@ -192,7 +202,7 @@ def main(argv=None) -> int:
             else:
                 label = f"tokens {face[1] if face[1] is not None else 'pending'}"
             if pushed:
-                # the pulse flips every tick; log only real face changes
+                # the phase advances constantly; log only real face changes
                 if face[:3] != last_logged:
                     _log(f"[daemon] {label}")
                     last_logged = face[:3]
@@ -212,7 +222,7 @@ def main(argv=None) -> int:
                 if say:
                     unreachable_logged = True
                     last_outage_notice = mono
-        time.sleep(1)
+        time.sleep(TICK_S)
 
     # blank the panel on the way out: a dark display unambiguously means
     # nothing is driving it, rather than a stale frame that looks healthy
