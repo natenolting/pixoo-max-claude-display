@@ -83,3 +83,19 @@ which still clears a pairing macOS introduced while we were down.
 
 This is a hypothesis supported by code reading and timing, not a reproduction.
 The wedge was seen once and has not recurred.
+
+## Addendum 4, 2026-08-30: recovery needs a quiet device
+
+A wedged Pixoo will not come back from a power cycle performed while the daemon
+is running. Three attempts failed in a row with the daemon retrying every few
+seconds throughout; stopping the agent first, then power-cycling, then starting
+it again connected on the first attempt with no failures and no pairing to undo.
+
+The device apparently needs an uninterrupted moment after boot to reach a state
+where it will accept an RFCOMM open, and a retry landing inside that window
+puts it back where it started. The documented recovery is therefore ordered:
+stop the agent, power-cycle, wait, start.
+
+Repeated rapid restarts are themselves a cause. This wedged the device three
+times in one evening of deploy-test cycles, and never once during ordinary
+running.

@@ -92,8 +92,23 @@ on a clean exit, so darkness is honest rather than a stale frame.
 
 **Panel dark, log says `device unreachable`.** The daemon retries with backoff
 and reports how long it has been out every five minutes. If it persists past a
-few minutes, **power-cycle the Pixoo** — the firmware wedges and no amount of
-retrying recovers it. This is the one failure with no software fix.
+few minutes the device has wedged, and it needs a power cycle **with the daemon
+stopped** — power-cycling underneath a running daemon usually fails, because its
+retries never give the device a quiet moment to come up:
+
+```bash
+launchctl bootout gui/$UID/com.natenolting.claude-display   # stop first
+# power-cycle the Pixoo, wait a few seconds
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.natenolting.claude-display.plist
+```
+
+If that still fails, reset the Mac's Bluetooth stack with `sudo pkill bluetoothd`
+(it respawns in a couple of seconds) and repeat.
+
+Restarting the daemon repeatedly in quick succession is itself a way to wedge
+the device — each restart tears down and rebuilds the Bluetooth session. In
+normal use it starts once at login and this never arises; it mainly bites while
+iterating on the code.
 
 **Panel dark after a reboot.** Expected to self-heal: macOS re-pairs the device
 during startup, the daemon notices and unpairs it, and the panel comes up after
