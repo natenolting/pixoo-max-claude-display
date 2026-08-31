@@ -8,18 +8,17 @@ turns.
 """
 
 import argparse
-import functools
 import signal
 import sys
 import time
 
 from . import brightness, config, tokens as tokens_mod, usage
+from .log import log as _log
 from .renderer import render, render_blank, render_tokens, render_usage
 from .signals import SPOOL_DIR, RegistrySweeper, SpoolReader
 from .state import SessionStore
 
-# unbuffered logs: the daemon usually runs with stdout redirected
-print = functools.partial(print, flush=True)
+
 
 DRY_RUN_FRAME = "/tmp/claude-display/frame.png"
 FORCED_REFRESH_S = 30
@@ -129,8 +128,8 @@ def main(argv=None) -> int:
     token_poller.start()  # ccusage is far too slow for the 1 s tick
     last_usage_poll = last_lock_poll = time.monotonic()
     rotation_start = time.monotonic()
-    print(f"[daemon] up; spool={args.spool} "
-          f"{'DRY RUN' if args.dry_run else 'device=' + args.address}")
+    _log("[daemon] up; spool=" + args.spool,
+         "DRY RUN" if args.dry_run else "device=" + args.address)
 
     while running:
         for event in spool.drain():
@@ -169,7 +168,7 @@ def main(argv=None) -> int:
             if args.dry_run or transport.set_brightness(want_brightness):
                 reason = "away" if away else (
                     "night" if want_brightness == brightness.NIGHT_BRIGHTNESS else "day")
-                print(f"[daemon] brightness {want_brightness} ({reason})")
+                _log(f"[daemon] brightness {want_brightness} ({reason})")
                 shown_brightness = want_brightness
 
         now = time.time()
@@ -189,7 +188,7 @@ def main(argv=None) -> int:
             if pushed:
                 # the pulse flips every tick; log only real face changes
                 if face[:3] != last_logged:
-                    print(f"[daemon] {label}")
+                    _log(f"[daemon] {label}")
                     last_logged = face[:3]
                 unreachable_logged = False
                 last_shown = face
@@ -199,11 +198,11 @@ def main(argv=None) -> int:
                 say = outage_announcement(down, unreachable_logged,
                                           mono - last_outage_notice)
                 if say == "first":
-                    print(f"[daemon] {label} (device unreachable, will retry)")
+                    _log(f"[daemon] {label} (device unreachable, will retry)")
                 elif say == "reminder":
                     # a dark panel must not stay silent for hours
-                    print(f"[daemon] still unreachable after {int(down // 60)} min"
-                          f" — if this persists, power-cycle the Pixoo")
+                    _log(f"[daemon] still unreachable after {int(down // 60)} min"
+                         f" — if this persists, power-cycle the Pixoo")
                 if say:
                     unreachable_logged = True
                     last_outage_notice = mono
@@ -211,7 +210,7 @@ def main(argv=None) -> int:
 
     # blank the panel on the way out: a dark display unambiguously means
     # nothing is driving it, rather than a stale frame that looks healthy
-    print("[daemon] shutting down")
+    _log("[daemon] shutting down")
     token_poller.stop()
     if args.dry_run:
         render_blank().save(DRY_RUN_FRAME)

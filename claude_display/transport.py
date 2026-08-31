@@ -8,6 +8,8 @@ reconnect on failure. Requires the Bluetooth TCC grant on the host process.
 import time
 from math import ceil, log2
 
+from .log import log as _log
+
 CMD_SET_BRIGHTNESS = 0x74
 CMD_DRAW_PIC = 0x44
 RFCOMM_CHANNEL = 1
@@ -141,12 +143,12 @@ class PixooTransport:
             try:
                 if dev.isPaired():
                     err = dev.remove()
-                    print(f"[transport] device was paired; unpaired (result {err})")
+                    _log(f"[transport] device was paired; unpaired (result {err})")
                     # unpairing drops whatever link macOS held; let the stack
                     # settle before opening ours, or it closes under us
                     self._pump(2.0)
             except Exception as e:
-                print(f"[transport] could not check/undo pairing: {e}")
+                _log(f"[transport] could not check/undo pairing: {e}")
         if not dev.isConnected():
             err = dev.openConnection()
             if err != 0:
@@ -181,7 +183,7 @@ class PixooTransport:
             self._down_since = None
             return True
         except Exception as e:
-            print(f"[transport] connect failed: {e}; retry in {self._backoff}s")
+            _log(f"[transport] connect failed: {e}; retry in {self._backoff}s")
             self._next_attempt = now + self._backoff
             self._backoff = min(self._backoff * 2, BACKOFF_MAX_S)
             # a failed attempt is the signal that a pairing may be in the way
@@ -215,7 +217,7 @@ class PixooTransport:
             self._pump(0.05)
             return True
         except Exception as e:
-            print(f"[transport] write failed: {e}; will reconnect")
+            _log(f"[transport] write failed: {e}; will reconnect")
             self.close()
             now = time.monotonic()
             self._next_attempt = now + self._backoff

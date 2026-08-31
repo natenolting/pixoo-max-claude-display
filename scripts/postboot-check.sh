@@ -58,10 +58,10 @@ fi
 if [ -f "$LOG" ]; then
     # the log survives reboots, so only consider lines since the daemon's
     # most recent start — otherwise pre-reboot history reads as healthy
-    recent=$(awk '/^\[daemon\] up;/{buf=""} {buf=buf $0 ORS} END{printf "%s", buf}' "$LOG")
+    recent=$(awk '/\[daemon\] up;/{buf=""} {buf=buf $0 ORS} END{printf "%s", buf}' "$LOG")
     # judge by the LATEST frame line, not by whether an outage ever happened:
     # a rocky start that has since recovered is a healthy display
-    latest=$(grep -E "^\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|OFF|usage)" <<<"$recent" | tail -1)
+    latest=$(grep -E "\[daemon\] (brightness|IDLE|WORKING|WAITING|NEEDS_PERMISSION|OFF|usage|tokens)" <<<"$recent" | tail -1)
     driving=no
     if [ -z "$latest" ]; then
         echo "WARN  agent started but has not pushed a frame yet"

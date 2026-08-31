@@ -17,6 +17,7 @@ import threading
 from datetime import date
 
 from . import config
+from .log import log as _log
 
 POLL_INTERVAL_S = config.TOKEN_POLL_S
 CCUSAGE_TIMEOUT_S = 90
@@ -60,7 +61,7 @@ def fetch(today: str | None = None) -> int | None:
     today = today or date.today().isoformat()
     npx = _find_npx()
     if npx is None:
-        print("[tokens] npx not found; token screen will stay blank")
+        _log("[tokens] npx not found; token screen will stay blank")
         return None
     # npx shells out to node, which is in the same bin directory and equally
     # invisible on launchd's PATH — hand the child a PATH that includes it
@@ -74,22 +75,22 @@ def fetch(today: str | None = None) -> int | None:
             capture_output=True, text=True, timeout=CCUSAGE_TIMEOUT_S, env=env,
         )
     except subprocess.TimeoutExpired:
-        print(f"[tokens] ccusage timed out after {CCUSAGE_TIMEOUT_S}s")
+        _log(f"[tokens] ccusage timed out after {CCUSAGE_TIMEOUT_S}s")
         return None
     except (subprocess.SubprocessError, OSError) as e:
-        print(f"[tokens] could not run ccusage: {e}")
+        _log(f"[tokens] could not run ccusage: {e}")
         return None
     if out.returncode != 0:
-        print(f"[tokens] ccusage exited {out.returncode}: "
+        _log(f"[tokens] ccusage exited {out.returncode}: "
               f"{out.stderr.strip()[:120]}")
         return None
     try:
         value = _today_input_output(json.loads(out.stdout), today)
     except (json.JSONDecodeError, ValueError) as e:
-        print(f"[tokens] could not parse ccusage output: {e}")
+        _log(f"[tokens] could not parse ccusage output: {e}")
         return None
     if value is None:
-        print(f"[tokens] no row for {today} in ccusage output")
+        _log(f"[tokens] no row for {today} in ccusage output")
     return value
 
 
