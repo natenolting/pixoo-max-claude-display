@@ -3,14 +3,14 @@
 Cadence per the daemon-architecture ticket: 1 s ticks (spool drain +
 render check), registry sweep every 3rd tick, forced refresh every 30 s.
 Rotation per the usage-screen semantics ticket: the State Screen holds the
-display alone whenever a session needs the user; otherwise the two faces
-alternate.
+display alone whenever a session needs the user; otherwise the faces take
+turns.
 """
 
 import argparse
+import functools
 import signal
 import sys
-import functools
 import time
 
 from . import brightness, config, tokens as tokens_mod, usage

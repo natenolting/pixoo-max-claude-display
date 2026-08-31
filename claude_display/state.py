@@ -1,7 +1,8 @@
 """Session state store: hook events + registry sweeps in, Aggregate State out.
 
 Semantics per CONTEXT.md: precedence NEEDS_PERMISSION > WAITING > WORKING >
-IDLE; WAITING demotes to IDLE after 30 min; NEEDS_PERMISSION never demotes.
+IDLE; WAITING demotes to IDLE after a configurable delay;
+NEEDS_PERMISSION never demotes.
 """
 
 import time

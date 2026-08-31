@@ -176,13 +176,14 @@ def render_usage(five_hour: int, seven_day: int) -> Image.Image:
     return img
 
 
+# One corner shared by every face: the faces swap in place, so a pixel of
+# drift between them reads as the mascot jumping.
+MASCOT_CORNER = (1, 25)
+
 # The Claude mascot, traced from assets/claude-guy.png and baked in as a
 # literal: the daemon must never fail to draw a face because a file moved.
 # Near-identical source shades are collapsed to two, since the wire format is
 # palette-indexed and every extra colour costs frame bytes.
-# one corner position shared by every face — the faces swap in place, so a
-# pixel of drift between them reads as the mascot jumping
-MASCOT_CORNER = (1, 25)
 MASCOT_BODY = (218, 119, 87)
 MASCOT_EYE = (248, 248, 248)
 MASCOT = [
@@ -272,8 +273,9 @@ def _count_badge(d, count: int) -> None:
 
 
 def render(state: str, count: int, pulse: bool = False) -> Image.Image:
-    """State Screen. `pulse` dims the icon for the liveness blink, which runs
-    only while a session demands attention (see the staleness ticket)."""
+    """State Screen. `pulse` is the liveness-blink phase, which runs only
+    while a session demands attention; each icon decides what it means for
+    itself (see the staleness ticket)."""
     if state == "IDLE":
         # a whole scene rather than a glyph on a field
         img = _sleeping_face()
