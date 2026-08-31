@@ -12,6 +12,11 @@ CMD_SET_BRIGHTNESS = 0x74
 CMD_DRAW_PIC = 0x44
 RFCOMM_CHANNEL = 1
 SETTLE_S = 1.0  # device drops bytes written immediately after connect
+# The device holds its end of an RFCOMM session briefly after the far side
+# goes away, and refuses new opens meanwhile. On an immediate restart
+# (launchctl kickstart) the first attempts land inside that window and fail,
+# so the first connect of a run waits it out instead of burning two retries.
+FIRST_CONNECT_DELAY_S = 4.0
 BACKOFF_MIN_S = 5
 BACKOFF_MAX_S = 60
 
@@ -110,10 +115,10 @@ class PixooTransport:
         self._device = None
         self._delegate = None
         self._backoff = BACKOFF_MIN_S
-        self._next_attempt = 0.0
         # first attempt of a run clears any pairing macOS made while we were down
         self._unpair_next = True
         self._down_since: float | None = None
+        self._next_attempt = time.monotonic() + FIRST_CONNECT_DELAY_S
 
     def _pump(self, seconds: float) -> None:
         from Foundation import NSDate, NSRunLoop
