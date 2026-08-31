@@ -131,6 +131,9 @@ class PixooTransport:
             if dev.isPaired():
                 err = dev.remove()
                 print(f"[transport] device was paired; unpaired (result {err})")
+                # unpairing drops whatever link macOS held; let the stack
+                # settle before opening our own, or it closes under us
+                self._pump(2.0)
         except Exception as e:
             print(f"[transport] could not check/undo pairing: {e}")
         if not dev.isConnected():
@@ -150,6 +153,8 @@ class PixooTransport:
                 break
         if delegate.open_status != 0:
             raise ConnectionError(f"RFCOMM open status: {delegate.open_status}")
+        if channel is None:
+            raise ConnectionError("RFCOMM reported open but returned no channel")
         self._device, self._delegate, self._channel = dev, delegate, channel
         self._pump(SETTLE_S)
 
@@ -171,6 +176,8 @@ class PixooTransport:
             return False
 
     def _write(self, data: bytes) -> None:
+        if self._channel is None:
+            raise ConnectionError("channel closed underneath us")
         mtu = self._channel.getMTU() or 666
         for i in range(0, len(data), mtu):
             chunk = data[i:i + mtu]

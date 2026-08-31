@@ -85,6 +85,8 @@ def main(argv=None) -> int:
     signal.signal(signal.SIGTERM, _stop)
 
     last_shown = None
+    last_logged = None
+    unreachable_logged = False
     last_push = 0.0
     shown_brightness = None
     tick = 0
@@ -134,16 +136,20 @@ def main(argv=None) -> int:
                 pushed = True
             else:
                 pushed = transport.push(img)
-            # the pulse flips every tick; log only real face changes
-            changed = last_shown is None or face[:3] != last_shown[:3]
-            if changed:
-                label = (f"{face[1]} x{face[2]}" if face[0] == "state"
-                         else f"usage 5h={face[1]}% 7d={face[2]}%")
-                print(f"[daemon] {label}"
-                      f"{'' if pushed else ' (device unreachable, will retry)'}")
+            label = (f"{face[1]} x{face[2]}" if face[0] == "state"
+                     else f"usage 5h={face[1]}% 7d={face[2]}%")
             if pushed:
+                # the pulse flips every tick; log only real face changes
+                if face[:3] != last_logged:
+                    print(f"[daemon] {label}")
+                    last_logged = face[:3]
+                unreachable_logged = False
                 last_shown = face
                 last_push = now
+            elif not unreachable_logged:
+                # say it once per outage, not once per second
+                print(f"[daemon] {label} (device unreachable, will retry)")
+                unreachable_logged = True
         time.sleep(1)
 
     # blank the panel on the way out: a dark display unambiguously means
