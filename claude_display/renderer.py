@@ -280,7 +280,9 @@ def render_tokens(count: int | None) -> Image.Image:
         w, gap = (11, 3) if len(digits) <= 2 else (9, 1)
         _number_with_dot(d, text, 16, 3, 17, TOKEN_INK, w, gap)
 
-    x = 10  # "TOK" centred in the bottom strip
+    # mascot in the corner, then "TOK" in the strip beside it
+    _mascot(d, 1, 25, scale=1, level=0.8)
+    x = 12
     for ch in "TOK":
         x += _letter(d, ch, x, 25, LABEL_INK) + 2
     return img
